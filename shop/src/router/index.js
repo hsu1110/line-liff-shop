@@ -23,10 +23,10 @@ const router = createRouter({
       name: 'history',
       component: () => import('../views/HistoryView.vue')
     },
+    // 所有不匹配的路徑都直接導回首頁
     {
       path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('../views/NotFoundView.vue')
+      redirect: '/'
     }
   ]
 })

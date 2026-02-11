@@ -1,0 +1,29 @@
+name: Deploy Shop to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master # 或是你的主分支名稱
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Install and Build 🔧
+        run: |
+          cd shop
+          npm install
+          npm run build
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: shop/dist # Vite build 出來的目錄
+          branch: gh-pages # 部署到 gh-pages 分支

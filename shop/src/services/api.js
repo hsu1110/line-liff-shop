@@ -31,5 +31,12 @@ export default {
     return apiClient.get('', {
       params: { action: 'getProducts' }
     })
+  },
+
+  // 取得訂單記錄 (V2)
+  getOrders(userId) {
+    return apiClient.get('', {
+      params: { action: 'getOrders', userId }
+    })
   }
 }

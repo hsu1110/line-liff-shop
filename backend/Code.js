@@ -152,6 +152,15 @@ function doGet(e) {
     return createJSONOutput({ status: "success", data: products });
   }
 
+  // 1.6. 取得訂單記錄 (V2 新增)
+  if (action === "getOrders") {
+    const userId = params.userId;
+    if (!userId) return createJSONOutput({ status: "error", message: "Missing User ID" });
+
+    const orders = getOrders(userId);
+    return createJSONOutput({ status: "success", data: orders });
+  }
+
   // 2. 測試連線
   if (action === "test") {
     return createJSONOutput({ status: "success", message: "API is working!" });
@@ -254,6 +263,35 @@ function getAllProducts() {
     }
   }
   return products.reverse(); // 新的上架排前面
+}
+
+/**
+ * [API] 取得訂單記錄 (供 V2 History 使用)
+ */
+function getOrders(targetUserId) {
+  const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const data = sheet.getDataRange().getValues();
+  const userOrders = [];
+
+  // 跳過標題列
+  for (let i = 1; i < data.length; i++) {
+    // 欄位對應: [OrderId, Time, User, PID, ItemName, Spec, Qty, Total]
+    // User ID 在第 3 欄 (Index 2)
+    const orderUserId = data[i][2];
+    
+    if (orderUserId === targetUserId) {
+      userOrders.push({
+        order_id: data[i][0],
+        time: Utilities.formatDate(new Date(data[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
+        item_name: data[i][4],
+        price: data[i][7] / data[i][6], // 單價 = 總價 / 數量 (簡單回推，或直接加欄位存單價)
+        qty: data[i][6],
+        spec: data[i][5],
+        total: data[i][7]
+      });
+    }
+  }
+  return userOrders.reverse(); // 新的訂單排前面
 }
 
 /**

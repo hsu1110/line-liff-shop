@@ -1,8 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useCartStore } from '../stores/cart'
+import { useCartStore } from '../stores/cart'
 import api from '../services/api'
 import liff from '@line/liff'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const cartStore = useCartStore()
 
@@ -30,30 +34,45 @@ async function checkout() {
 
     // 每一筆都要送出訂單 (目前的後端只支援單筆)
     // 之後後端升級可以一次送整包
+    let lastResult = null
+    // 每一筆都要送出訂單
     for (const item of items.value) {
-      await api.submitOrder({
+      const res = await api.submitOrder({
         pid: item.pid,
         userId: userId,
         userName: userName,
         spec: item.spec,
         qty: item.qty
       })
+      if (res.status === 'success') {
+        lastResult = res
+      }
     }
 
-    alert("訂單已送出！")
     cartStore.clearCart()
     
-    // 免費通知 (Optional)
+    // V2 為了簡化，顯示最後一筆訂單號就好 (假設使用者不會一次下單太多筆)
+    // 或是把所有單號串起來
+    const lastOrderId = lastResult.orderId
+
+    // 免費通知 (必須在 LIFF 內)
     if (liff.isInClient()) {
-       liff.sendMessages([{
-         type: 'text',
-         text: '我已下單 (來自 V2 商城)'
-       }])
-       .then(() => liff.closeWindow())
-       .catch((err) => {
-         console.error(err)
+       try {
+         await liff.sendMessages([{
+           type: 'text',
+           text: `我已下單 #${lastOrderId}`
+         }])
+         // 傳送成功後關閉視窗，讓使用者看到聊天室的回覆
          liff.closeWindow()
-       })
+       } catch (err) {
+         console.error('LIFF Send Error:', err)
+         // 如果傳送失敗 (例如使用者封鎖)，還是要讓流程繼續，可以跳轉到歷史訂單
+         router.push({ name: 'history' })
+       }
+    } else {
+      // 網頁版，直接跳轉歷史訂單
+      alert("訂單已送出！")
+      router.push({ name: 'history' })
     }
 
   } catch (e) {

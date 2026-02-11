@@ -11,7 +11,6 @@ onMounted(async () => {
   try {
     // 確保有 User ID
     if (!liffService.profile) {
-      // 嘗試等待一下 init
       await liffService.init(); 
     }
     
@@ -47,66 +46,107 @@ onMounted(async () => {
 
     <div v-else class="order-list">
       <div v-for="(order, idx) in orders" :key="idx" class="order-card">
-        <div class="header">
+        
+        <!-- 卡片頭部：單號與時間 -->
+        <div class="card-header">
           <span class="order-id">#{{ order.order_id }}</span>
           <span class="time">{{ order.time }}</span>
         </div>
+
+        <!-- 買家資訊 (雖然是自己的訂單，但還是顯示一下以確認) -->
+        <div class="row user-info" v-if="order.user_name">
+          <span class="label">買家:</span>
+          <span class="value">{{ order.user_name }}</span>
+        </div>
+
+        <!-- 商品內容 -->
         <div class="content">
           <h3>{{ order.item_name }}</h3>
-          <p class="spec" v-if="order.spec">{{ order.spec }}</p>
-          <div class="details">
-            <span>$ {{ order.price }}</span>
-            <span>x {{ order.qty }}</span>
+          <div class="row" v-if="order.spec">
+            <span class="label">規格:</span>
+            <span class="value">{{ order.spec }}</span>
+          </div>
+          
+          <div class="row details">
+            <span class="price-qty">
+              $ {{ Math.round(order.total / order.qty) }} x {{ order.qty }}
+            </span>
             <span class="total">$ {{ order.total }}</span>
           </div>
         </div>
-        <!-- 狀態標籤 (如果後端有回傳 status 欄位可顯示，目前先沒做) -->
-        <div class="status-tag">處理中</div>
+
+        <!-- 狀態與總結 -->
+        <div class="card-footer">
+          <span class="status-badge" :class="order.order_status === '已完成' ? 'done' : 'pending'">
+            {{ order.order_status || '處理中' }}
+          </span>
+        </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.history-container { padding: 1rem; }
+.history-container { padding: 1rem; max-width: 600px; margin: 0 auto; }
 .loading, .empty, .error { text-align: center; padding: 2rem; color: #666; }
 .error { color: #ff5555; }
 
 .order-card {
   background: white;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  border-left: 4px solid #06c755;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-left: 5px solid #06c755;
 }
 
-.header {
+.card-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-size: 0.85rem;
   color: #888;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 8px;
 }
 
-.content h3 { margin: 0 0 4px 0; font-size: 1rem; }
-.spec { font-size: 0.85rem; color: #666; margin: 0 0 8px 0; }
+.order-id { font-family: monospace; font-weight: bold; }
+
+.row {
+  display: flex;
+  margin-bottom: 4px;
+}
+.label { color: #888; margin-right: 8px; font-size: 0.9rem; }
+.value { color: #333; font-size: 0.9rem; }
+
+.content h3 {
+  margin: 8px 0;
+  font-size: 1.1rem;
+  color: #333;
+}
 
 .details {
-  display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: bold;
+  margin-top: 12px;
 }
-.total { color: #ff5555; font-size: 1.1rem; }
 
-.status-tag {
-  margin-top: 8px;
+.price-qty { color: #666; font-size: 0.95rem; }
+.total { color: #ff5555; font-size: 1.2rem; font-weight: bold; }
+
+.card-footer {
+  margin-top: 12px;
   text-align: right;
-  font-size: 0.8rem;
-  color: #06c755;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: bold;
 }
+.status-badge.pending { background: #e6f7ff; color: #1890ff; }
+.status-badge.done { background: #f6ffed; color: #52c41a; }
 </style>

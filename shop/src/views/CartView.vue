@@ -6,6 +6,7 @@ import liff from '@line/liff'
 import liffService from '../services/liff'
 import { useRouter } from 'vue-router'
 import { optimizeImage } from '../services/image'
+import { showToast } from '../services/toast'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -57,7 +58,7 @@ async function checkout() {
           router.push({ name: 'history' })
         }
       } else {
-        alert("訂單已送出！單號: " + batchOrderId)
+        showToast("訂單已送出！單號: " + batchOrderId, 'success')
         router.push({ name: 'history' })
       }
     } else {
@@ -65,7 +66,7 @@ async function checkout() {
     }
 
   } catch (e) {
-    alert("結帳失敗: " + e.message)
+    showToast("結帳失敗: " + e.message, 'error')
   } finally {
     isSubmitting.value = false
   }

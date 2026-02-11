@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import api from '../services/api'
 import { useCartStore } from '../stores/cart'
 import { optimizeImage } from '../services/image'
+import { showToast } from '../services/toast'
 
 const route = useRoute()
 const cartStore = useCartStore()
@@ -18,7 +19,7 @@ onMounted(async () => {
     if (res.data.status === 'success') {
       product.value = res.data.data
     } else {
-      alert("商品不存在")
+      showToast("商品不存在", 'error')
     }
   } catch (e) {
     console.error(e)
@@ -32,7 +33,7 @@ function addToCart() {
   if (product.value.status === 'SOLD_OUT') return
   
   cartStore.addToCart(product.value, qty.value, spec.value || "單一規格")
-  alert("已加入購物車！")
+  showToast("已加入購物車！", 'success')
 }
 
 function updateQty(delta) {

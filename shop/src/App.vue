@@ -2,6 +2,8 @@
 import { onMounted } from "vue";
 import liffService from "./services/liff";
 import { useRouter } from "vue-router";
+import TheToast from "./components/TheToast.vue";
+import { toastRef } from "./services/toast";
 
 const router = useRouter();
 
@@ -11,8 +13,6 @@ onMounted(async () => {
   
   // 2. 等待 Router 就緒
   await router.isReady();
-  
-  // 這裡不再做任何手動轉址，完全依賴 Vue Router 的標準機制
 });
 </script>
 
@@ -24,6 +24,8 @@ onMounted(async () => {
       </transition>
     </RouterView>
   </main>
+
+  <TheToast ref="toastRef" />
 
   <nav class="bottom-nav">
     <router-link to="/" class="nav-item">

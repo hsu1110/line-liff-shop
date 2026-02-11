@@ -17,7 +17,8 @@ const CONFIG = {
   SHEET_TAB: {
     PRODUCTS: "Products",
     ORDERS: "Orders",
-    CONFIG: "SystemConfig" // 新增設定分頁
+    CONFIG: "SystemConfig", // 新增設定分頁
+    LOGS: "Logs" // 新增日誌分頁
   },
 
   // 動態讀取設定
@@ -106,6 +107,20 @@ function setup() {
     ["order_id", "order_time", "user_name", "user_id", "pid", "item_name", "spec", "qty", "total_amount", "order_status"]
   ]);
   
+  // 5. 處理 "Logs" 分頁
+  let logSheet = ss.getSheetByName(CONFIG.SHEET_TAB.LOGS);
+  if (!logSheet) {
+    logSheet = ss.insertSheet(CONFIG.SHEET_TAB.LOGS);
+  } else {
+    logSheet.clear();
+  }
+  logSheet.getRange(1, 1, 1, 3).setValues([
+    ["Time", "Type", "Payload"]
+  ]);
+  logSheet.setColumnWidth(1, 180);
+  logSheet.setColumnWidth(2, 100);
+  logSheet.setColumnWidth(3, 800);
+
   Logger.log("✅ 全部設定完成！");
   Logger.log("👉 請現在打開試算表，切換到 'SystemConfig' 分頁，填入 Token 資料。");
 }
@@ -176,7 +191,10 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
-    const contents = JSON.parse(e.postData.contents);
+    const rawContent = e.postData.contents;
+    saveLog("POST", rawContent); // 紀錄原始 Payload
+    
+    const contents = JSON.parse(rawContent);
     
     // 如果是 LINE Webhook (會有 events 屬性)
     if (contents.events) {
@@ -618,6 +636,21 @@ function updateProductStatus(pid, newStatus) {
     }
   }
   return null;
+}
+
+/**
+ * 📝 儲存日誌到 Google Sheet
+ */
+function saveLog(type, content) {
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.LOGS);
+    if (sheet) {
+      sheet.appendRow([new Date(), type, content]);
+    }
+  } catch (e) {
+    Logger.log("SaveLog Error: " + e.toString());
+  }
 }
 
 /**

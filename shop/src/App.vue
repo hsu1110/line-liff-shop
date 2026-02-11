@@ -5,13 +5,27 @@ import { useRouter } from "vue-router";
 import TheToast from "./components/TheToast.vue";
 import { toastRef } from "./services/toast";
 import { useCartStore } from "./stores/cart";
+import api from "./services/api";
 
 const router = useRouter();
 const cartStore = useCartStore();
 const isBumped = ref(false);
+const isAdmin = ref(false);
 
 onMounted(async () => {
   await liffService.init();
+  
+  // 驗證管理員身份
+  const user = liffService.getUser();
+  if (user?.userId) {
+    try {
+      const res = await api.checkAdmin(user.userId);
+      isAdmin.value = res.data.isAdmin;
+    } catch (e) {
+      console.error("Admin check failed", e);
+    }
+  }
+  
   await router.isReady();
 });
 
@@ -54,6 +68,10 @@ watch(() => cartStore.totalItems, (newVal, oldVal) => {
     <router-link to="/history" class="nav-item">
       <div class="icon">📜</div>
       <span>訂單</span>
+    </router-link>
+    <router-link v-if="isAdmin" to="/admin/products" class="nav-item admin-btn">
+      <div class="icon">⚙️</div>
+      <span>管理</span>
     </router-link>
   </nav>
 </template>

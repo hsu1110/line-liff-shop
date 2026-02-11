@@ -45,18 +45,12 @@ onMounted(async () => {
     <div v-else-if="orders.length === 0" class="empty">尚無訂單記錄</div>
 
     <div v-else class="order-list">
-      <div v-for="(order, idx) in orders" :key="idx" class="order-card">
+      <div v-for="(order, idx) in orders" :key="idx" class="order-card glass-card">
         
         <!-- 卡片頭部：單號與時間 -->
         <div class="card-header">
           <span class="order-id">#{{ order.order_id }}</span>
           <span class="time">{{ order.time }}</span>
-        </div>
-
-        <!-- 買家資訊 (雖然是自己的訂單，但還是顯示一下以確認) -->
-        <div class="row user-info" v-if="order.user_name">
-          <span class="label">買家:</span>
-          <span class="value">{{ order.user_name }}</span>
         </div>
 
         <!-- 商品內容 -->
@@ -88,42 +82,48 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.history-container { padding: 1rem; max-width: 600px; margin: 0 auto; }
-.loading, .empty, .error { text-align: center; padding: 2rem; color: #666; }
-.error { color: #ff5555; }
+.history-container { 
+  padding: 1.5rem; 
+  max-width: 600px; 
+  margin: 0 auto;
+  padding-bottom: 120px;
+}
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: var(--text-main);
+}
+.loading, .empty, .error { text-align: center; padding: 3rem; color: var(--text-sub); }
 
 .order-card {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  border-left: 5px solid #06c755;
+  padding: 16px;
+  border-left: 5px solid var(--primary);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 12px;
-  font-size: 0.85rem;
-  color: #888;
-  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  border-bottom: 1px solid var(--glass-border);
   padding-bottom: 8px;
 }
 
-.order-id { font-family: monospace; font-weight: bold; }
+.order-id { font-family: monospace; font-weight: 800; color: var(--text-main); }
 
 .row {
   display: flex;
   margin-bottom: 4px;
 }
-.label { color: #888; margin-right: 8px; font-size: 0.9rem; }
-.value { color: #333; font-size: 0.9rem; }
+.label { color: var(--text-sub); margin-right: 8px; font-size: 0.85rem; }
+.value { color: var(--text-main); font-size: 0.85rem; font-weight: 600; }
 
 .content h3 {
   margin: 8px 0;
-  font-size: 1.1rem;
-  color: #333;
+  font-size: 1.05rem;
+  color: var(--text-main);
 }
 
 .details {
@@ -132,8 +132,8 @@ onMounted(async () => {
   margin-top: 12px;
 }
 
-.price-qty { color: #666; font-size: 0.95rem; }
-.total { color: #ff5555; font-size: 1.2rem; font-weight: bold; }
+.price-qty { color: var(--text-sub); font-size: 0.9rem; }
+.total { color: var(--accent); font-size: 1.3rem; font-weight: 800; }
 
 .card-footer {
   margin-top: 12px;
@@ -144,9 +144,9 @@ onMounted(async () => {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
-.status-badge.pending { background: #e6f7ff; color: #1890ff; }
-.status-badge.done { background: #f6ffed; color: #52c41a; }
+.status-badge.pending { background: rgba(0, 122, 255, 0.1); color: #007aff; }
+.status-badge.done { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
 </style>

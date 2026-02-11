@@ -25,6 +25,42 @@ export default {
       data: orderData
     }))
   },
+
+  // --- 管理員 API ---
+  checkAdmin(userId) {
+    return apiClient.post('', JSON.stringify({
+      action: 'checkAdmin',
+      userId: userId
+    }))
+  },
+  adminUpdateProduct(userId, productData) {
+    return apiClient.post('', JSON.stringify({
+      action: 'adminUpdateProduct',
+      userId: userId,
+      data: productData
+    }))
+  },
+  adminDeleteProduct(userId, pid) {
+    return apiClient.post('', JSON.stringify({
+      action: 'adminDeleteProduct',
+      userId: userId,
+      pid: pid
+    }))
+  },
+  adminGetAllOrders(userId) {
+    return apiClient.post('', JSON.stringify({
+      action: 'adminGetAllOrders',
+      userId: userId
+    }))
+  },
+  adminUpdateOrder(userId, orderId, status) {
+    return apiClient.post('', JSON.stringify({
+      action: 'adminUpdateOrder',
+      userId: userId,
+      orderId: orderId,
+      status: status
+    }))
+  },
   
   // (Future) 取得商品列表 - 需擴充 GAS
   getProducts() {

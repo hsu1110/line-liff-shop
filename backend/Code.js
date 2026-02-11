@@ -654,6 +654,90 @@ function saveLog(type, content) {
 }
 
 /**
+ * 📦 更新商品資訊 (管理員)
+ */
+function updateProduct(data) {
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+  const rows = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === data.pid) {
+      // 依序更新：名稱、描述、價格、圖片、狀態、規格
+      sheet.getRange(i + 1, 2).setValue(data.name);
+      sheet.getRange(i + 1, 3).setValue(data.description);
+      sheet.getRange(i + 1, 4).setValue(data.price);
+      sheet.getRange(i + 1, 5).setValue(data.image_url);
+      sheet.getRange(i + 1, 6).setValue(data.status);
+      sheet.getRange(i + 1, 7).setValue(data.specs);
+      return { status: 'success' };
+    }
+  }
+  return { status: 'error', message: '找不到商品' };
+}
+
+/**
+ * 🗑️ 刪除商品 (管理員)
+ */
+function deleteProduct(pid) {
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+  const rows = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === pid) {
+      sheet.deleteRow(i + 1);
+      return { status: 'success' };
+    }
+  }
+  return { status: 'error', message: '找不到商品' };
+}
+
+/**
+ * 📜 獲取全量訂單 (管理員)
+ */
+function getAdminOrders() {
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const rows = sheet.getDataRange().getValues();
+  const orders = [];
+  
+  for (let i = rows.length - 1; i >= 1; i--) {
+    orders.push({
+      orderId: rows[i][0],
+      time: rows[i][1],
+      userName: rows[i][2],
+      userId: rows[i][3],
+      pid: rows[i][4],
+      productName: rows[i][5],
+      spec: rows[i][6],
+      qty: rows[i][7],
+      amount: rows[i][8],
+      status: rows[i][9]
+    });
+  }
+  return orders;
+}
+
+/**
+ * ✅ 更新訂單狀態 (管理員)
+ */
+function updateOrderStatus(orderId, status) {
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const rows = sheet.getDataRange().getValues();
+  
+  let count = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === orderId) {
+      sheet.getRange(i + 1, 10).setValue(status);
+      count++;
+    }
+  }
+  return count > 0 ? { status: 'success' } : { status: 'error', message: '找不到訂單' };
+}
+
+/**
  * 回覆文字訊息
  */
 function replyText(replyToken, text) {

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
 import { useRouter } from 'vue-router'
+import { optimizeImage } from '../services/image'
 
 const products = ref([])
 const loading = ref(true)
@@ -62,7 +63,7 @@ function goToProduct(pid) {
         @click="goToProduct(p.pid)"
       >
         <div class="img-wrapper">
-          <img :src="p.image_url" :alt="p.name" loading="lazy" />
+          <img :src="optimizeImage(p.image_url, 400)" :alt="p.name" loading="lazy" />
           <div v-if="p.status === 'SOLD_OUT'" class="sold-out-overlay">
             <span>SOLD OUT</span>
           </div>

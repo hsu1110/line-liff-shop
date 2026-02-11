@@ -5,6 +5,7 @@ import api from '../services/api'
 import liff from '@line/liff'
 import liffService from '../services/liff'
 import { useRouter } from 'vue-router'
+import { optimizeImage } from '../services/image'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -87,7 +88,7 @@ async function checkout() {
     <div v-else class="cart-list">
       <div v-for="(item, idx) in items" :key="idx" class="cart-item glass-card">
         <div class="img-box">
-          <img :src="item.image_url" />
+          <img :src="optimizeImage(item.image_url, 200)" />
         </div>
         <div class="info">
           <h3>{{ item.name }}</h3>

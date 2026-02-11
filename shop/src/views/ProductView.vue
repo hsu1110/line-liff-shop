@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../services/api'
 import { useCartStore } from '../stores/cart'
+import { optimizeImage } from '../services/image'
 
 const route = useRoute()
 const cartStore = useCartStore()
@@ -43,7 +44,7 @@ function updateQty(delta) {
 <template>
   <div class="product-container" v-if="product">
     <div class="img-wrapper">
-      <img :src="product.image_url" :alt="product.name" />
+      <img :src="optimizeImage(product.image_url, 800)" :alt="product.name" />
       <div v-if="product.status === 'SOLD_OUT'" class="sold-out-overlay">
         <span>SOLD OUT</span>
       </div>

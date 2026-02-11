@@ -4,6 +4,7 @@ import { useCartStore } from '../stores/cart'
 
 import api from '../services/api'
 import liff from '@line/liff'
+import liffService from '../services/liff'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -22,15 +23,10 @@ async function checkout() {
   if (cartStore.totalItems === 0) return
   
   try {
-    // 取得使用者資料
-    let userId = "BROWSER_TEST_USER"
-    let userName = "Browser User"
-    
-    if (liff.isInClient()) {
-      const profile = await liff.getProfile()
-      userId = profile.userId
-      userName = profile.displayName
-    }
+    // 取得使用者資料 (使用統一的 liffService)
+    const user = liffService.getUser()
+    const userId = user?.userId || "UNKNOWN_USER"
+    const userName = user?.displayName || "未知使用者"
 
     // 每一筆都要送出訂單 (目前的後端只支援單筆)
     // 之後後端升級可以一次送整包
@@ -50,6 +46,7 @@ async function checkout() {
     }
 
     cartStore.clearCart()
+    alert("訂單已送出！")
     
     // V2 為了簡化，顯示最後一筆訂單號就好 (假設使用者不會一次下單太多筆)
     // 或是把所有單號串起來
@@ -71,7 +68,6 @@ async function checkout() {
        }
     } else {
       // 網頁版，直接跳轉歷史訂單
-      alert("訂單已送出！")
       router.push({ name: 'history' })
     }
 

@@ -359,46 +359,59 @@ function getOrderByOrderId(targetOrderId) {
 /**
  * [API] 提交訂單 (供 LIFF 使用)
  */
+/**
+ * [API] 提交訂單 (供 LIFF 使用) - 支援批次結帳
+ */
 function submitOrder(formData) {
   const lock = LockService.getScriptLock();
   // 最多等待 5 秒
   if (lock.tryLock(5000)) {
     try {
-      const pid = formData.pid;
+      const items = formData.items; // 預期是一個陣列
       const userId = formData.userId;
-      const spec = formData.spec;
-      const qty = parseInt(formData.qty);
-      
-      // 1. 安全查價 (不信任前端價格)
-      const product = getProductInfo(pid);
-      if (!product) return { status: 'error', message: '商品不存在' };
-      if (product.status === 'SOLD_OUT') return { status: 'error', message: '商品已售完' };
-      
-      const price = parseInt(product.price);
-      const totalAmount = price * qty;
-      const orderId = "ORD_" + new Date().getTime();
+      const userName = formData.userName;
       const orderTime = new Date();
+      const batchId = "ORD_" + orderTime.getTime(); // 這次結帳的主編號
       
-      // 2. 寫入訂單 (Orders 表)
-      const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.ORDERS);
-      // ["order_id", "order_time", "user_name", "user_id", "pid", "item_name", "spec", "qty", "total_amount", "order_status"]
-      sheet.appendRow([
-        orderId, orderTime, formData.userName, userId, pid, 
-        product.name, spec, qty, totalAmount, "未付款"
-      ]);
-      
-      // 3. 通知 (買家 & 管理員) - 暫時關閉以節省成本 (改用 Reply API)
-      // A. 通知買家
-      /*
-      if (userId && userId !== "BROWSER_TEST_USER") {
-        pushMessage(userId, [{type: 'text', text: `✅ 訂單已成立！\n單號: ${orderId}\n品項: ${product.name} (${spec})\n數量: ${qty}\n總金額: $${totalAmount}`}]);
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return { status: 'error', message: '購物車是空的' };
       }
-      
-      // B. 通知管理員
-      pushToAdmin(`💰 新訂單入帳！\n單號: ${orderId}\n買家: ${formData.userName}\n品項: ${product.name} x ${qty}\n規格: ${spec}\n總額: $${totalAmount}`);
-      */
 
-      return { status: 'success', orderId: orderId };
+      const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+      const rowsToAdd = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const pid = item.pid;
+        const spec = item.spec;
+        const qty = parseInt(item.qty);
+
+        // 1. 安全查價 (不信任前端價格)
+        const product = getProductInfo(pid);
+        if (!product) continue; // 略過不存在的商品
+        if (product.status === 'SOLD_OUT') continue; // 略過售完商品
+
+        const price = parseInt(product.price);
+        const totalAmount = price * qty;
+        
+        // 生成子訂單編號 (如果是批次，可以加後綴)
+        const subOrderId = items.length > 1 ? `${batchId}-${i+1}` : batchId;
+
+        // 欄位順序: ["order_id", "order_time", "user_name", "user_id", "pid", "item_name", "spec", "qty", "total_amount", "order_status"]
+        rowsToAdd.push([
+          subOrderId, orderTime, userName, userId, pid, 
+          product.name, spec, qty, totalAmount, "未付款"
+        ]);
+      }
+
+      if (rowsToAdd.length > 0) {
+        // 批次寫入提升效能
+        const lastRow = sheet.getLastRow();
+        sheet.getRange(lastRow + 1, 1, rowsToAdd.length, 10).setValues(rowsToAdd);
+        return { status: 'success', orderId: batchId };
+      } else {
+        return { status: 'error', message: '所有商品已失效或售完' };
+      }
       
     } catch(e) {
       return { status: 'error', message: e.toString() };

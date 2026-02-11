@@ -724,7 +724,7 @@ function pushMessage(to, messages) {
 function createProductCard(pid, name, price, imageUrl) {
   // 嘗試取得 LIFF ID，還沒設定就用預設值提醒
   const liffId = CONFIG.get(KEY.LIFF_ID) || "YOUR_LIFF_ID_HERE";
-  const liffUrl = `https://liff.line.me/${liffId}?pid=${pid}`;
+  const liffUrl = `https://liff.line.me/${liffId}/#/product/${pid}`; // 改成 Hash 路由
 
   return {
     "type": "flex",
@@ -802,7 +802,7 @@ function createProductCard(pid, name, price, imageUrl) {
             "color": "#1E90FF",
             "action": {
               "type": "uri",
-              "uri": `https://liff.line.me/${CONFIG.get(KEY.LIFF_ID)}?action=share&pid=${pid}`,
+              "uri": `https://liff.line.me/${CONFIG.get(KEY.LIFF_ID)}/#/product/${pid}?action=share`, // 分享也改用 Hash
               "label": "📤 分享小卡",
             },
           },
@@ -955,7 +955,7 @@ function createOrderReceiptCard(order) {
             "action": {
               "type": "uri",
               "label": "查看訂單",
-              "uri": `https://liff.line.me/${liffId}?page=history`
+              "uri": `https://liff.line.me/${liffId}/#/history` // 改成 Hash 路由
             }
           }
         ]

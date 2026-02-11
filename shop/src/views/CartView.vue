@@ -44,8 +44,8 @@ async function checkout() {
         spec: item.spec,
         qty: item.qty
       })
-      if (res.status === 'success') {
-        lastResult = res
+      if (res.data.status === 'success') {
+        lastResult = res.data
       }
     }
 

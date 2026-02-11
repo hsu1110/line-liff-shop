@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useCartStore } from '../stores/cart'
-import { useCartStore } from '../stores/cart'
+
 import api from '../services/api'
 import liff from '@line/liff'
 import { useRouter } from 'vue-router'

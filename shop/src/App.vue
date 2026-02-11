@@ -1,18 +1,28 @@
 <script setup>
-import { onMounted } from "vue";
+import { onMounted, ref, watch } from "vue";
 import liffService from "./services/liff";
 import { useRouter } from "vue-router";
 import TheToast from "./components/TheToast.vue";
 import { toastRef } from "./services/toast";
+import { useCartStore } from "./stores/cart";
 
 const router = useRouter();
+const cartStore = useCartStore();
+const isBumped = ref(false);
 
 onMounted(async () => {
-  // 1. 初始化 LIFF
   await liffService.init();
-  
-  // 2. 等待 Router 就緒
   await router.isReady();
+});
+
+// 監聽購物車總數變化，觸發跳動動畫
+watch(() => cartStore.totalItems, (newVal, oldVal) => {
+  if (newVal > oldVal) {
+    isBumped.value = true;
+    setTimeout(() => {
+      isBumped.value = false;
+    }, 300);
+  }
 });
 </script>
 
@@ -32,8 +42,13 @@ onMounted(async () => {
       <div class="icon">🏠</div>
       <span>商城</span>
     </router-link>
-    <router-link to="/cart" class="nav-item cart-btn">
-      <div class="icon">🛒</div>
+    <router-link to="/cart" class="nav-item cart-btn" :class="{ 'bump': isBumped }">
+      <div class="icon-wrapper">
+        <div class="icon">🛒</div>
+        <div v-if="cartStore.totalItems > 0" class="badge">
+          {{ cartStore.totalItems }}
+        </div>
+      </div>
       <span>購物車</span>
     </router-link>
     <router-link to="/history" class="nav-item">
@@ -76,10 +91,37 @@ onMounted(async () => {
   font-size: 11px;
   gap: 4px;
   transition: all 0.3s ease;
+  position: relative;
 }
 
-.nav-item .icon {
+.icon-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon {
   font-size: 20px;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .nav-item.router-link-active {
@@ -89,6 +131,19 @@ onMounted(async () => {
 
 .nav-item.router-link-active .icon {
   filter: drop-shadow(0 0 5px rgba(6, 199, 85, 0.5));
+}
+
+/* Bump 動畫 */
+.bump {
+  animation: bump 0.3s ease-out;
+}
+
+@keyframes bump {
+  0% { transform: scale(1) translateY(-5px); }
+  10% { transform: scale(0.9) translateY(-5px); }
+  30% { transform: scale(1.1) translateY(-10px); }
+  50% { transform: scale(1.15) translateY(-12px); }
+  100% { transform: scale(1) translateY(-5px); }
 }
 
 /* 轉場動畫 */

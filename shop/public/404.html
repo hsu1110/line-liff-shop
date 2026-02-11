@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    // GitHub Pages SPA 404 Redirect
+    // 取得當前的路徑 (path), 搜尋參數 (search), 和 hash
+    // 例如: /line-liff-shop/product/123?q=abc#hash
+    var pathSegmentsToKeep = 1; // 保留幾層路徑? 因為你的 Base URL 是 /line-liff-shop/，所以設為 1 (如果是在根目錄則為 0)
+    
+    var l = window.location;
+    // 重建 URL: /line-liff-shop/?redirect=/product/123&q=abc#hash
+    // 這裡我們把真正的路徑 (/product/123) 變成 redirect 參數傳給 index.html
+    
+    // 簡單判斷: 如果是 /line-liff-shop/history，我們想轉去 /line-liff-shop/#/history
+    // 但因為我們使用通用解法，我們先轉成 query param，讓 Vue Router 決定
+    
+    // 為了避免無限迴圈，確認這不是 index.html
+    
+    // 取得路徑部分 (移除 base url)
+    // 假設 user 網址是 https://hsu1110.github.io/line-liff-shop/history
+    // path 應該是 /line-liff-shop/history
+    
+    // 讓我們用一個更簡單的邏輯：保留原本的所有東西，全都塞給 index.html 處理
+    // 這裡使用 replace 避免上一頁回到 404
+    
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?redirect=' +
+      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
+  </script>
+</head>
+<body>
+</body>
+</html>

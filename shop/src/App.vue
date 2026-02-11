@@ -16,6 +16,26 @@ onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const pid = urlParams.get("pid");
   const page = urlParams.get("page");
+  const redirect = urlParams.get("redirect"); // 來自 404.html 的轉址參數
+
+  // 處理 GitHub Pages 404 轉址
+  if (redirect) {
+    // 還原被編碼的 & 符號 (如果在 404.html 有做處理的話)
+    const finalPath = redirect.replace(/~and~/g, '&');
+    
+    // 清除網址列的 redirect 參數，讓網址變回漂亮的樣子
+    const cleanUrl = window.location.href
+      .replace(/[?&]redirect=[^&]+/, '')
+      .replace(/\?$/, ''); // 移除結尾多餘的 ?
+      
+    window.history.replaceState(null, '', cleanUrl);
+
+    // 執行路由跳轉
+    // 如果 redirect 是 '/history'，這裡會跳轉到对应的 hash 路由
+    console.log("Redirecting from 404:", finalPath);
+    router.replace(finalPath.startsWith('/') ? finalPath : '/' + finalPath);
+    return; // 處理完轉址後直接結束，不繼續執行下面的邏輯
+  }
 
   // 小功能：如果是從舊連結 (?pid=...) 或選單 (?page=...) 進來的，自動導向
   if (pid) {

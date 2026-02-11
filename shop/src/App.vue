@@ -23,9 +23,16 @@ onMounted(async () => {
   } else if (page) {
     console.log("Redirecting to page:", page);
     // 如果頁面名稱存在於路由中，就跳轉
-    router.replace({ name: page }).catch(err => {
+    router.replace({ name: page }).then(() => {
+      // 跳轉成功後，清除網址列的參數，避免醜醜的 (?page=...)
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.hash;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+    }).catch(err => {
       console.error("Navigation failed:", err);
     });
+  } else {
+    // 沒有參數時，如果是 Hash Mode，不需要特別做什麼，Router 會自己處理
+    // 但如果有殘留的參數 (例如重整後)，也可以考慮清掉
   }
 });
 </script>

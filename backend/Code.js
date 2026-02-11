@@ -311,14 +311,19 @@ function getOrders(targetUserId) {
     const orderUserId = data[i][3];
     
     if (orderUserId === targetUserId) {
+      const qty = data[i][7];
+      const total = data[i][8];
+      
       userOrders.push({
         order_id: data[i][0],
         time: Utilities.formatDate(new Date(data[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
-        item_name: data[i][4],
-        price: data[i][7] / data[i][6], // 單價 = 總價 / 數量 (簡單回推，或直接加欄位存單價)
-        qty: data[i][6],
-        spec: data[i][5],
-        total: data[i][7]
+        user_name: data[i][2],
+        item_name: data[i][5],
+        spec: data[i][6],
+        qty: qty,
+        total: total,
+        price: qty > 0 ? (total / qty) : 0, 
+        order_status: data[i][9]
       });
     }
   }
@@ -334,16 +339,17 @@ function getOrderByOrderId(targetOrderId) {
   
   // 跳過標題列
   for (let i = 1; i < data.length; i++) {
-    // 欄位: [OrderId, Time, User, PID, ItemName, Spec, Qty, Total]
+    // 欄位: [Orderid, Time, UserName, UserID, PID, ItemName, Spec, Qty, Total, Status]
     if (data[i][0] === targetOrderId) {
       return {
         order_id: data[i][0],
         time: Utilities.formatDate(new Date(data[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
         user_name: data[i][2],
-        item_name: data[i][4],
-        spec: data[i][5],
-        qty: data[i][6],
-        total: data[i][7]
+        item_name: data[i][5],
+        spec: data[i][6],
+        qty: data[i][7],
+        total: data[i][8],
+        order_status: data[i][9]
       };
     }
   }

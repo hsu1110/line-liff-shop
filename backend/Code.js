@@ -357,9 +357,6 @@ function getOrderByOrderId(targetOrderId) {
 }
 
 /**
- * [API] 提交訂單 (供 LIFF 使用)
- */
-/**
  * [API] 提交訂單 (供 LIFF 使用) - 支援批次結帳
  */
 function submitOrder(formData) {

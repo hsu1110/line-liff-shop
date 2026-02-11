@@ -18,59 +18,61 @@ function removeItem(index) {
   cartStore.removeFromCart(index)
 }
 
-const isProcessing = ref(false)
-
 // 結帳功能
 async function checkout() {
-  if (cartStore.totalItems === 0 || isProcessing.value) return
+  if (cartStore.totalItems === 0) return
   
-  isProcessing.value = true
   try {
+    // 取得使用者資料 (使用統一的 liffService)
     const user = liffService.getUser()
     const userId = user?.userId || "UNKNOWN_USER"
     const userName = user?.displayName || "未知使用者"
 
-    // 取得購物車資料並重組，僅傳送必要欄位
-    const orderItems = items.value.map(item => ({
-      pid: item.pid,
-      spec: item.spec,
-      qty: item.qty
-    }))
-
-    // 一次性送出整張訂單
-    const res = await api.submitOrder({
-      items: orderItems,
-      userId: userId,
-      userName: userName
-    })
-
-    if (res.data.status === 'success') {
-      const orderId = res.data.orderId
-      cartStore.clearCart()
-      
-      // 免費通知 (必須在 LIFF 內)
-      if (liffService.isInClient()) {
-        try {
-          await liff.sendMessages([{
-            type: 'text',
-            text: `我已下單 #${orderId}`
-          }])
-          liff.closeWindow()
-        } catch (err) {
-          console.error('LIFF Send Error:', err)
-          router.push({ name: 'history' })
-        }
-      } else {
-        alert("訂單已送出！單號: #" + orderId)
-        router.push({ name: 'history' })
+    // 每一筆都要送出訂單 (目前的後端只支援單筆)
+    // 之後後端升級可以一次送整包
+    let lastResult = null
+    // 每一筆都要送出訂單
+    for (const item of items.value) {
+      const res = await api.submitOrder({
+        pid: item.pid,
+        userId: userId,
+        userName: userName,
+        spec: item.spec,
+        qty: item.qty
+      })
+      if (res.data.status === 'success') {
+        lastResult = res.data
       }
-    } else {
-      alert("結帳失敗: " + (res.data.message || '未知錯誤'))
     }
+
+    cartStore.clearCart()
+    alert("訂單已送出！")
+    
+    // V2 為了簡化，顯示最後一筆訂單號就好 (假設使用者不會一次下單太多筆)
+    // 或是把所有單號串起來
+    const lastOrderId = lastResult.orderId
+
+    // 免費通知 (必須在 LIFF 內)
+    if (liff.isInClient()) {
+       try {
+         await liff.sendMessages([{
+           type: 'text',
+           text: `我已下單 #${lastOrderId}`
+         }])
+         // 傳送成功後關閉視窗，讓使用者看到聊天室的回覆
+         liff.closeWindow()
+       } catch (err) {
+         console.error('LIFF Send Error:', err)
+         // 如果傳送失敗 (例如使用者封鎖)，還是要讓流程繼續，可以跳轉到歷史訂單
+         router.push({ name: 'history' })
+       }
+    } else {
+      // 網頁版，直接跳轉歷史訂單
+      router.push({ name: 'history' })
+    }
+
   } catch (e) {
-    alert("系統連線錯誤: " + e)
-  } finally {
-    isProcessing.value = false
+    alert("結帳失敗: " + e)
   }
 }
 </script>
@@ -101,13 +103,7 @@ async function checkout() {
       
       <div class="footer">
         <div class="total">總計: $ {{ cartStore.totalPrice }}</div>
-        <button 
-          @click="checkout" 
-          class="checkout-btn"
-          :disabled="isProcessing"
-        >
-          {{ isProcessing ? '處理中...' : '送出訂單' }}
-        </button>
+        <button @click="checkout" class="checkout-btn">送出訂單</button>
       </div>
     </div>
   </div>
@@ -119,41 +115,31 @@ async function checkout() {
   display: flex;
   background: white;
   padding: 10px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .cart-item img {
-  width: 90px; height: 90px; object-fit: cover; border-radius: 8px;
+  width: 80px; height: 80px; object-fit: cover; border-radius: 4px;
 }
 .info {
-  flex: 1; margin-left: 12px;
+  flex: 1; margin-left: 10px;
 }
-.info h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: #333; }
+.info h3 { margin: 0 0 5px 0; font-size: 1rem; }
 .price-qty {
   display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;
-  color: #ff5555;
 }
 .del-btn {
-  background: #fff0f0; color: #ff5555; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; margin-top: 8px;
-  font-weight: bold; cursor: pointer;
+  background: #ff5555; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-top: 5px;
 }
 .footer {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
-  padding: 16px 20px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  background: white; padding: 15px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
   display: flex; justify-content: space-between; align-items: center;
 }
-.total { font-weight: bold; font-size: 1.3rem; color: #333; }
+.total { font-weight: bold; font-size: 1.2rem; }
 .checkout-btn {
-  background: linear-gradient(135deg, #06c755, #05b14c); color: white; border: none; padding: 12px 28px; border-radius: 25px; font-weight: bold;
-  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3); transition: all 0.2s;
-}
-.checkout-btn:disabled {
-  background: #ccc; box-shadow: none; cursor: not-allowed;
-}
-.checkout-btn:active {
-  transform: scale(0.95);
+  background: #06c755; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold;
 }
 </style>

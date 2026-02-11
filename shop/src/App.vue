@@ -23,8 +23,11 @@ onMounted(async () => {
   } else if (page) {
     console.log("Redirecting to page:", page);
     // 如果頁面名稱存在於路由中，就跳轉
-    router.replace({ name: page }).then(() => {
-      // 跳轉成功後，清除網址列的參數，避免醜醜的 (?page=...)
+    // 如果是 'home'，強制跳轉到 '/'
+    const targetRoute = (page === 'home') ? '/' : { name: page };
+    
+    router.replace(targetRoute).then(() => {
+      // 跳轉成功後，清除網址列的參數
       const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.hash;
       window.history.replaceState({ path: newUrl }, '', newUrl);
     }).catch(err => {

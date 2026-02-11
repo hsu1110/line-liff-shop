@@ -17,9 +17,12 @@ onMounted(async () => {
   
   // 驗證管理員身份
   const user = liffService.getUser();
+  console.log("Current User UID:", user?.userId); // 👈 協助用戶找到自己的 UID
+  
   if (user?.userId) {
     try {
       const res = await api.checkAdmin(user.userId);
+      console.log("Is Admin Response:", res.data); // 👈 檢查後端回傳結果
       isAdmin.value = res.data.isAdmin;
     } catch (e) {
       console.error("Admin check failed", e);

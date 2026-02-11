@@ -1,0 +1,1 @@
+import{_ as s,c as r,a as o,d as t}from"./index-Txo-tZaC.js";const n={},c={class:"history"};function a(d,e){return t(),r("div",c,[...e[0]||(e[0]=[o("h1",null,"訂單記錄",-1),o("p",null,"No orders found.",-1)])])}const _=s(n,[["render",a]]);export{_ as default};

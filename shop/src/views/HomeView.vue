@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 
 const products = ref([])
 const loading = ref(true)
+const errMsg = ref('')
 const router = useRouter()
 
 onMounted(async () => {
@@ -14,9 +15,11 @@ onMounted(async () => {
       products.value = res.data.data
     } else {
       console.error(res.data.message)
+      errMsg.value = res.data.message || "無法取得商品列表，請稍後再試"
     }
   } catch (e) {
     console.error(e)
+    errMsg.value = "網路連線錯誤，請檢查網路狀態"
   } finally {
     loading.value = false
   }
@@ -33,6 +36,15 @@ function goToProduct(pid) {
     
     <div v-if="loading" class="loading">
       載入中...
+    </div>
+
+    <div v-else-if="errMsg" class="error">
+      {{ errMsg }}
+      <br><small>(請確認後端是否已部署最新版本)</small>
+    </div>
+
+    <div v-else-if="products.length === 0" class="empty">
+      尚無上架商品
     </div>
 
     <div v-else class="product-grid">
@@ -112,6 +124,7 @@ function goToProduct(pid) {
   font-size: 0.9rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2; /* Standard property */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -123,9 +136,13 @@ function goToProduct(pid) {
   margin: 0;
 }
 
-.loading {
+.loading, .empty, .error {
   text-align: center;
   padding: 2rem;
   color: #666;
+}
+
+.error {
+  color: red;
 }
 </style>

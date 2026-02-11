@@ -210,7 +210,38 @@ function handleLineWebhook(contents) {
 
     if (userId === adminId) {
       handleAdminMessage(event, replyToken);
+    } else {
+      // 處理一般使用者訊息 (例如: 接收 LIFF 傳來的 "我已下單" 並回覆)
+      handleUserMessage(event, replyToken);
     }
+}
+
+/**
+ * 處理一般使用者訊息
+ */
+function handleUserMessage(event, replyToken) {
+  if (event.type !== 'message' || event.message.type !== 'text') return;
+  
+  const text = event.message.text;
+  
+  // 偵測 "我已下單 #ORD_" 開頭的訊息
+  if (text.startsWith("我已下單 #ORD_")) {
+    const orderId = text.split("#")[1].trim(); // 取出 ORD_12345
+    
+    // 1. 去 Orders 表查訂單詳情
+    const order = getOrderByOrderId(orderId);
+    if (order) {
+      // 2. 回覆 Flex Message (免費!)
+      const flex = createOrderReceiptCard(order);
+      replyFlexMessage(replyToken, flex);
+      
+      // 3. 順便通知管理員 (雖然這裡用 Push 還是要錢，但管理員通知通常無法省)
+      // 如果想省管理員通知，可以改用 LINE Notify，但這裡先維持 Push (因為量少)
+      pushToAdmin(`💰 新訂單入帳！\n單號: ${order.order_id}\n買家: ${order.user_name}\n金額: $${order.total}`);
+    } else {
+      replyText(replyToken, "找不到訂單資料，請聯繫客服。");
+    }
+  }
 }
 
 // ==========================================
@@ -276,8 +307,8 @@ function getOrders(targetUserId) {
   // 跳過標題列
   for (let i = 1; i < data.length; i++) {
     // 欄位對應: [OrderId, Time, User, PID, ItemName, Spec, Qty, Total]
-    // User ID 在第 3 欄 (Index 2)
-    const orderUserId = data[i][2];
+    // User ID 在第 4 欄 (Index 3)
+    const orderUserId = data[i][3];
     
     if (orderUserId === targetUserId) {
       userOrders.push({
@@ -292,6 +323,31 @@ function getOrders(targetUserId) {
     }
   }
   return userOrders.reverse(); // 新的訂單排前面
+}
+
+/**
+ * [Helper] 依訂單編號查詢訂單 (供 handleUserMessage 使用)
+ */
+function getOrderByOrderId(targetOrderId) {
+  const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const data = sheet.getDataRange().getValues();
+  
+  // 跳過標題列
+  for (let i = 1; i < data.length; i++) {
+    // 欄位: [OrderId, Time, User, PID, ItemName, Spec, Qty, Total]
+    if (data[i][0] === targetOrderId) {
+      return {
+        order_id: data[i][0],
+        time: Utilities.formatDate(new Date(data[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
+        user_name: data[i][2],
+        item_name: data[i][4],
+        spec: data[i][5],
+        qty: data[i][6],
+        total: data[i][7]
+      };
+    }
+  }
+  return null;
 }
 
 /**
@@ -325,14 +381,16 @@ function submitOrder(formData) {
         product.name, spec, qty, totalAmount, "未付款"
       ]);
       
-      // 3. 通知 (買家 & 管理員)
+      // 3. 通知 (買家 & 管理員) - 暫時關閉以節省成本 (改用 Reply API)
       // A. 通知買家
+      /*
       if (userId && userId !== "BROWSER_TEST_USER") {
         pushMessage(userId, [{type: 'text', text: `✅ 訂單已成立！\n單號: ${orderId}\n品項: ${product.name} (${spec})\n數量: ${qty}\n總金額: $${totalAmount}`}]);
       }
       
       // B. 通知管理員
       pushToAdmin(`💰 新訂單入帳！\n單號: ${orderId}\n買家: ${formData.userName}\n品項: ${product.name} x ${qty}\n規格: ${spec}\n總額: $${totalAmount}`);
+      */
 
       return { status: 'success', orderId: orderId };
       
@@ -784,4 +842,118 @@ function getValFromConfigSheet(key) {
     Logger.log("Read Config Error: " + e.toString());
     return null;
   }
+}
+
+/**
+ * 產生訂單收據卡片 (Receipt Card)
+ */
+function createOrderReceiptCard(order) {
+  // 嘗試取得 LIFF ID，還沒設定就用預設值提醒
+  const liffId = CONFIG.get(KEY.LIFF_ID) || "YOUR_LIFF_ID_HERE";
+  
+  
+  return {
+    "type": "flex",
+    "altText": `訂單成立通知 #${order.order_id}`,
+    "contents": {
+      "type": "bubble",
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+          {
+            "type": "text",
+            "text": "訂單成立通知",
+            "weight": "bold",
+            "color": "#1DB446",
+            "size": "sm"
+          },
+          {
+            "type": "text",
+            "text": "$" + order.total,
+            "weight": "bold",
+            "size": "xxl",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": order.item_name + (order.spec ? ` (${order.spec})` : ""),
+            "size": "xs",
+            "color": "#aaaaaa",
+            "wrap": true
+          },
+          {
+            "type": "separator",
+            "margin": "xxl"
+          },
+          {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "xxl",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "box",
+                "layout": "baseline",
+                "contents": [
+                  {
+                    "type": "text",
+                    "text": "單號",
+                    "color": "#aaaaaa",
+                    "size": "sm",
+                    "flex": 1
+                  },
+                  {
+                    "type": "text",
+                    "text": "#" + order.order_id,
+                    "wrap": true,
+                    "color": "#666666",
+                    "size": "sm",
+                    "flex": 5
+                  }
+                ]
+              },
+              {
+                "type": "box",
+                "layout": "baseline",
+                "contents": [
+                  {
+                    "type": "text",
+                    "text": "時間",
+                    "color": "#aaaaaa",
+                    "size": "sm",
+                    "flex": 1
+                  },
+                  {
+                    "type": "text",
+                    "text": order.time,
+                    "wrap": true,
+                    "color": "#666666",
+                    "size": "sm",
+                    "flex": 5
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+           {
+            "type": "button",
+            "style": "link",
+            "height": "sm",
+            "action": {
+              "type": "uri",
+              "label": "查看訂單",
+              "uri": `https://liff.line.me/${liffId}?page=history`
+            }
+          }
+        ]
+      }
+    }
+  };
 }

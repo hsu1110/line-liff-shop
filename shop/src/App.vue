@@ -1,23 +1,33 @@
 <script setup>
-import { onMounted } from 'vue'
-import liffService from './services/liff'
-import { useRouter } from 'vue-router'
+import { onMounted } from "vue";
+import liffService from "./services/liff";
+import { useRouter } from "vue-router";
 
-const router = useRouter()
+const router = useRouter();
 
-onMounted(() => {
-  liffService.init()
-
-  // Legacy Redirect: ?pid=... -> /product/:id
-  const urlParams = new URLSearchParams(window.location.search);
-  const pid = urlParams.get('pid');
+onMounted(async () => {
+  // 1. 先初始化已有的服務
+  await liffService.init();
   
+  // 2. 確保 Router 已經準備好
+  await router.isReady();
+
+  // 3. 解析 URL 參數
+  const urlParams = new URLSearchParams(window.location.search);
+  const pid = urlParams.get("pid");
+  const page = urlParams.get("page");
+
+  // 小功能：如果是從舊連結 (?pid=...) 或選單 (?page=...) 進來的，自動導向
   if (pid) {
-    // Replace URL to clean query params and push router
-    // Use replace to avoid back button loop
-    router.replace({ name: 'product', params: { id: pid } })
+    router.replace({ name: "product", params: { id: pid } });
+  } else if (page) {
+    console.log("Redirecting to page:", page);
+    // 如果頁面名稱存在於路由中，就跳轉
+    router.replace({ name: page }).catch(err => {
+      console.error("Navigation failed:", err);
+    });
   }
-})
+});
 </script>
 
 <template>

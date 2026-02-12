@@ -46,7 +46,7 @@
 | B | 商品名稱 | `name` | 商品品名 |
 | C | 價格 | `price` | **真實售價** (後端查價以此為準) |
 | D | 圖片連結 | `image_url` | Cloudinary 的 `secure_url` |
-| E | 狀態 | `status` | `ON_SALE` (上架中) / `SOLD_OUT` (完售) |
+| E | 狀態 | `status` | `AVAILABLE` (上架中) / `SOLD_OUT` (完售) |
 | F | 上架時間 | `created_at` | 格式 `YYYY-MM-DD HH:mm:ss` |
 
 ### 3.2 訂單表 (分頁名稱: `Orders`)

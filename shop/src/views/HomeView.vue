@@ -176,7 +176,7 @@ function goToProduct(pid) {
   border-radius: 6px;
 }
 
-.status-tag.ON_SALE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
+.status-tag.AVAILABLE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
 .status-tag.SOLD_OUT { background: rgba(0,0,0,0.05); color: var(--text-sub); }
 
 .go-btn {

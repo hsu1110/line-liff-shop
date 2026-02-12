@@ -340,7 +340,7 @@ function getProductInfo(pid) {
  */
 function getAllProducts() {
   const cache = CacheService.getScriptCache();
-  const cacheKey = "ALL_PRODUCTS_V2";
+  const cacheKey = "ALL_PRODUCTS_V3";
   const cached = cache.get(cacheKey);
   
   if (cached) {
@@ -355,7 +355,7 @@ function getAllProducts() {
   for (let i = 1; i < data.length; i++) {
     const status = data[i][4];
     // 只回傳上架中或售完的商品 (不回傳下架 OFF_SHELF 的)
-    if (status === 'ON_SALE' || status === 'SOLD_OUT') {
+    if (status === 'AVAILABLE' || status === 'SOLD_OUT') {
       products.push({
         pid: data[i][0],
         name: data[i][1],
@@ -369,6 +369,10 @@ function getAllProducts() {
   
   // 寫入快取 (20分鐘)
   cache.put(cacheKey, JSON.stringify(result), 1200);
+  
+  // Debug Log: 檢查到底讀到了什麼
+  Logger.log(`[getAllProducts] Read ${data.length} rows. Found ${products.length} available items.`);
+  
   return result;
 }
 
@@ -721,7 +725,7 @@ function addProductToSheet(pid, name, price, imageUrl, status, createdAt) {
   sheet.appendRow([pid, name, price, imageUrl, status, createdAt]);
   
   // 清除快取，讓新商品即時顯示
-  CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
+  CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
 }
 
 /**

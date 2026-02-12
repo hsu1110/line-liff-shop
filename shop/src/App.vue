@@ -17,12 +17,10 @@ onMounted(async () => {
   
   // 驗證管理員身份
   const user = liffService.getUser();
-  // 加上 await 以防 liffService.getIDToken 變成非同步 (雖然現在改回同步了，但這樣更安全)
-  const idToken = await liffService.getIDToken();
   
-  if (user?.userId && idToken) {
+  if (user?.userId) {
     try {
-      const res = await api.checkAdmin(idToken);
+      const res = await api.checkAdmin(user.userId);
       isAdmin.value = res.data.isAdmin;
     } catch (e) {
       console.error("Admin check failed", e);

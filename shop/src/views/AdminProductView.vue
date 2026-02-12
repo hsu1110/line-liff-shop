@@ -21,9 +21,9 @@ const fetchProducts = async () => {
 
 const toggleStatus = async (product) => {
   const newStatus = product.status === 'AVAILABLE' ? 'SOLD_OUT' : 'AVAILABLE'
-  const idToken = await liffService.getIDToken()
+  const user = liffService.getUser()
   try {
-    await api.adminUpdateProduct(idToken, { ...product, status: newStatus })
+    await api.adminUpdateProduct(user.userId, { ...product, status: newStatus })
     product.status = newStatus
     showToast(`狀態已更新為 ${newStatus}`, 'success')
   } catch (e) {
@@ -33,9 +33,9 @@ const toggleStatus = async (product) => {
 
 const deleteProduct = async (pid) => {
   if (!confirm('確定要刪除此商品嗎？此操作無法復原。')) return
-  const idToken = await liffService.getIDToken()
+  const user = liffService.getUser()
   try {
-    await api.adminDeleteProduct(idToken, pid)
+    await api.adminDeleteProduct(user.userId, pid)
     products.value = products.value.filter(p => p.pid !== pid)
     showToast('商品已刪除', 'success')
   } catch (e) {

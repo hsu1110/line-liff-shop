@@ -208,19 +208,12 @@ function doPost(e) {
     // --- 前端 API 路由 ---
     const action = contents.action;
     
-    // 檢查是否為管理員操作 (以 "admin" 開頭)
-    if (action.startsWith('admin') || action === 'checkAdmin') {
-      // 強制驗證 ID Token
-      const idToken = contents.idToken;
-      const verificationStr = verifyIdToken(idToken);
-      const realUserId = verificationStr.uid;
+      // 簡化模式：直接檢查 userId (應使用者要求，移除 ID Token 驗證)
+      const userId = contents.userId;
+      const adminId = CONFIG.get(KEY.ADMIN_ID);
       
-      if (!realUserId) {
-          return createJSONOutput({ status: 'error', message: `Unauthorized: ${verificationStr.error}` });
-      }
-
-      if (realUserId !== CONFIG.get(KEY.ADMIN_ID)) {
-          return createJSONOutput({ status: 'error', message: `Unauthorized: Admin ID Mismatch. Your ID: ${realUserId}` });
+      if (!userId || userId !== adminId) {
+          return createJSONOutput({ status: 'error', message: 'Unauthorized: Admin ID Mismatch' });
       }
       
       // 驗證通過，執行管理員邏輯

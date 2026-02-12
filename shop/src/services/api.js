@@ -27,38 +27,37 @@ export default {
     }))
   },
 
-  // --- 管理員 API (需傳送 idToken) ---
-  checkAdmin(idToken) {
+  // --- 管理員 API (改回傳送 userId) ---
+  checkAdmin(userId) {
     return apiClient.post('', JSON.stringify({
       action: 'checkAdmin',
-      idToken: idToken
+      userId: userId
     }))
   },
-  // 修改: 統一改傳 idToken，User ID 由後端解碼
-  adminUpdateProduct(idToken, productData) {
+  adminUpdateProduct(userId, productData) {
     return apiClient.post('', JSON.stringify({
       action: 'adminUpdateProduct',
-      idToken: idToken,
+      userId: userId,
       data: productData
     }))
   },
-  adminDeleteProduct(idToken, pid) {
+  adminDeleteProduct(userId, pid) {
     return apiClient.post('', JSON.stringify({
       action: 'adminDeleteProduct',
-      idToken: idToken,
+      userId: userId,
       pid: pid
     }))
   },
-  adminGetAllOrders(idToken) {
+  adminGetAllOrders(userId) {
     return apiClient.post('', JSON.stringify({
       action: 'adminGetAllOrders',
-      idToken: idToken
+      userId: userId
     }))
   },
-  adminUpdateOrder(idToken, orderId, status) {
+  adminUpdateOrder(userId, orderId, status) {
     return apiClient.post('', JSON.stringify({
       action: 'adminUpdateOrder',
-      idToken: idToken,
+      userId: userId,
       orderId: orderId,
       status: status
     }))

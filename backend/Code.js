@@ -244,11 +244,12 @@ function doPost(e) {
       case 'submitOrder':
         return createJSONOutput(submitOrder(contents.data));
 
-      case 'getProducts': // 補回 getProducts
+      case 'getProducts': 
         return createJSONOutput({ status: "success", data: getAllProducts() });
         
-      case 'getOrders': // 補回 getOrders
-        const userId = contents.userId; // 一般使用者還是可以用 userId 查自己訂單 (或也可升級成 verifyIdToken，但這裡先維持原樣以免改太多)
+      case 'getOrders': 
+        // 修正: 這裡應該用 contents.userId (POST Body)
+        const userId = contents.userId; 
         return createJSONOutput({ status: "success", data: getOrders(userId) });
 
       default:
@@ -627,9 +628,12 @@ function verifyIdToken(idToken) {
   if (idToken === "MOCK_TOKEN") return null; // 拒絕 Mock Token
   
   const channelId = CONFIG.get(KEY.CHANNEL_ID);
+  
+  // 安全檢查：如果沒設定 Channel ID，但在 Localhost 測試，不要讓整個 Script Crash
   if (!channelId) {
     Logger.log("❌ Missing CHANNEL_ID in Config");
-    return null;
+    // 如果是 Admin 操作但沒設定 Channel ID，為了安全必須擋下
+    return null; 
   }
 
   const url = "https://api.line.me/oauth2/v2.1/verify";

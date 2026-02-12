@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // 使用環境變數 (Vite)
-const API_URL = import.meta.env.VITE_API_URL;
+// 使用環境變數 (Vite)
+const API_URL = import.meta.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbza_R4p07vetWGk44_P1rnqZh4-oZ4vN7Od74MUP7x0hvIGNTcTNwPx1haaCtBFzPej/exec";
 
 const apiClient = axios.create({
   baseURL: API_URL,

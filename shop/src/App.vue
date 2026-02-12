@@ -11,29 +11,20 @@ const router = useRouter();
 const cartStore = useCartStore();
 const isBumped = ref(false);
 const isAdmin = ref(false);
-const debugUid = ref("Loading...");
-const debugAdminRes = ref("Waiting...");
 
 onMounted(async () => {
   await liffService.init();
   
   // 驗證管理員身份
   const user = liffService.getUser();
-  debugUid.value = user?.userId || "No User ID";
-  console.log("Debug - Current UID:", user?.userId);
   
   if (user?.userId) {
     try {
       const res = await api.checkAdmin(user.userId);
-      debugAdminRes.value = JSON.stringify(res.data);
-      console.log("Debug - Admin Check Response:", res.data);
       isAdmin.value = res.data.isAdmin;
     } catch (e) {
-      debugAdminRes.value = "Error: " + e.message;
       console.error("Admin check failed", e);
     }
-  } else {
-    debugAdminRes.value = "Skipped (No UID)";
   }
   
   await router.isReady();
@@ -84,13 +75,6 @@ watch(() => cartStore.totalItems, (newVal, oldVal) => {
       <span>管理</span>
     </router-link>
   </nav>
-
-  <!-- Debug Info Overlay -->
-  <div class="debug-info" v-if="true">
-    <div>UID: {{ debugUid }}</div>
-    <div>AdminCheck: {{ debugAdminRes }}</div>
-    <div style="color: yellow; margin-top: 5px;">請截圖此畫面給開發者</div>
-  </div>
 </template>
 
 <style scoped>
@@ -190,23 +174,5 @@ watch(() => cartStore.totalItems, (newVal, oldVal) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-/* Debug Info UI (Temporary) */
-.debug-info {
-  position: fixed;
-  bottom: 100px;
-  left: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #0f0;
-  padding: 10px;
-  font-family: monospace;
-  font-size: 10px;
-  border-radius: 8px;
-  z-index: 9999;
-  pointer-events: none;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 </style>

@@ -203,18 +203,14 @@ function doPost(e) {
     }
 
     // --- 前端 API 路由 ---
+    const action = contents.action; // [Fix] Re-add missing declaration
     switch (action) {
       case 'submitOrder':
         return createJSONOutput(submitOrder(contents.data));
       
       // --- 管理員專屬 API ---
       case 'checkAdmin':
-        const configAdminId = CONFIG.get(KEY.ADMIN_ID);
-        Logger.log(`[CheckAdmin] User: ${contents.userId}, ConfigAdmin: ${configAdminId}`);
-        return createJSONOutput({ 
-          isAdmin: contents.userId === configAdminId,
-          debug: `User:${contents.userId} / Admin:${configAdminId}` // 暫時回傳 debug 資訊給前端
-        });
+        return createJSONOutput({ isAdmin: contents.userId === CONFIG.get(KEY.ADMIN_ID) });
       
       case 'adminGetProducts':
         if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");

@@ -202,15 +202,43 @@ function doPost(e) {
       return createJSONOutput({ status: "success" });
     }
 
-    // 如果是前端 API 呼叫
-    const action = contents.action;
-    
-    if (action === "submitOrder") {
-      const result = submitOrder(contents.data);
-      return createJSONOutput(result);
+    // --- 前端 API 路由 ---
+    switch (action) {
+      case 'submitOrder':
+        return createJSONOutput(submitOrder(contents.data));
+      
+      // --- 管理員專屬 API ---
+      case 'checkAdmin':
+        const configAdminId = CONFIG.get(KEY.ADMIN_ID);
+        Logger.log(`[CheckAdmin] User: ${contents.userId}, ConfigAdmin: ${configAdminId}`);
+        return createJSONOutput({ 
+          isAdmin: contents.userId === configAdminId,
+          debug: `User:${contents.userId} / Admin:${configAdminId}` // 暫時回傳 debug 資訊給前端
+        });
+      
+      case 'adminGetProducts':
+        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
+        return createJSONOutput({ status: 'success', data: getAllProducts() }); // 這裡暫時用 getAllProducts，但管理員應該能看更多
+        
+      case 'adminUpdateProduct':
+        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
+        return createJSONOutput(updateProduct(contents.data));
+        
+      case 'adminDeleteProduct':
+        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
+        return createJSONOutput(deleteProduct(contents.pid));
+        
+      case 'adminGetAllOrders':
+        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
+        return createJSONOutput({ status: 'success', data: getAdminOrders() });
+        
+      case 'adminUpdateOrder':
+        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
+        return createJSONOutput(updateOrderStatus(contents.orderId, contents.status));
+
+      default:
+        return createJSONOutput({ status: "error", message: "Unknown Action: " + action });
     }
-    
-    return createJSONOutput({ status: "error", message: "Unknown Action" });
 
   } catch (error) {
     return createJSONOutput({ status: "error", message: error.toString() });

@@ -41,6 +41,19 @@ const liffService = {
   
   getIDToken() {
     if (this.isMock) return "MOCK_TOKEN"
+    
+    // 同步檢查過期 (liff.getDecodedIDToken 是同步的)
+    const decoded = liff.getDecodedIDToken()
+    if (decoded && decoded.exp) {
+      const now = Math.floor(Date.now() / 1000)
+      if (decoded.exp - now < 300) {
+        console.log("Token expired or expiring soon.")
+        // 注意：這裡不能直接做 async login，因為這會變成非同步
+        // 我們只能建議使用者重整，或者依賴 LIFF SDK 自動處理
+        // 但為了避免送出過期 Token，我們可以回傳 null 讓前端有機會處理
+        // 或者直接回傳，讓後端擋
+      }
+    }
     return liff.getIDToken()
   },
   

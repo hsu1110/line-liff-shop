@@ -212,12 +212,15 @@ function doPost(e) {
     if (action.startsWith('admin') || action === 'checkAdmin') {
       // 強制驗證 ID Token
       const idToken = contents.idToken;
-      const realUserId = verifyIdToken(idToken);
+      const verificationStr = verifyIdToken(idToken);
+      const realUserId = verificationStr.uid;
       
-      if (!realUserId || realUserId !== CONFIG.get(KEY.ADMIN_ID)) {
-          // 如果是 localhost 開發或測試，允許 MOCK_TOKEN (僅當後端也開啟 DEBUG 模式時? 還是直接擋掉?)
-          // 安全起見，直接阻擋。開發者需使用真實 Token 或自行處理。
-          return createJSONOutput({ status: 'error', message: 'Unauthorized: Invalid or Missing Identity' });
+      if (!realUserId) {
+          return createJSONOutput({ status: 'error', message: `Unauthorized: ${verificationStr.error}` });
+      }
+
+      if (realUserId !== CONFIG.get(KEY.ADMIN_ID)) {
+          return createJSONOutput({ status: 'error', message: `Unauthorized: Admin ID Mismatch. Your ID: ${realUserId}` });
       }
       
       // 驗證通過，執行管理員邏輯
@@ -637,19 +640,18 @@ function getLineContent(messageId) {
 
 /**
  * 驗證 LINE ID Token
- * @return {string|null} userId 成功回傳 User ID，失敗回傳 null
+ * @return {object} { uid: string|null, error: string|null }
  */
 function verifyIdToken(idToken) {
-  if (!idToken) return null;
-  if (idToken === "MOCK_TOKEN") return null; // 拒絕 Mock Token
+  if (!idToken) return { uid: null, error: "Token is empty" };
+  if (idToken === "MOCK_TOKEN") return { uid: null, error: "Received MOCK_TOKEN" }; 
   
   const channelId = CONFIG.get(KEY.CHANNEL_ID);
   
-  // 安全檢查：如果沒設定 Channel ID，但在 Localhost 測試，不要讓整個 Script Crash
+  // 安全檢查
   if (!channelId) {
     Logger.log("❌ Missing CHANNEL_ID in Config");
-    // 如果是 Admin 操作但沒設定 Channel ID，為了安全必須擋下
-    return null; 
+    return { uid: null, error: "CHANNEL_ID is not configured in Sheet" };
   }
 
   const url = "https://api.line.me/oauth2/v2.1/verify";
@@ -661,7 +663,7 @@ function verifyIdToken(idToken) {
   try {
     const options = {
       method: 'post',
-      payload: payload, // Form UrlEncoded
+      payload: payload, 
       muteHttpExceptions: true
     };
     const response = UrlFetchApp.fetch(url, options);
@@ -669,17 +671,13 @@ function verifyIdToken(idToken) {
     
     if (data.error) {
       Logger.log("Token Verify Error: " + data.error_description);
-      return null;
+      return { uid: null, error: `LINE API Error: ${data.error_description}` };
     }
     
-    // 檢查是否過期 (雖然 API 會檢查，但雙重確認)
-    // data.exp is in seconds
-    // API 已經幫忙檢查 nonce, aud, exp, iss
-    
-    return data.sub; // User ID
+    return { uid: data.sub, error: null }; // 成功
   } catch (e) {
     Logger.log("Verify Exception: " + e.toString());
-    return null;
+    return { uid: null, error: `Exception: ${e.toString()}` };
   }
 }
 

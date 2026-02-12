@@ -56,18 +56,10 @@ router.beforeEach(async (to, from, next) => {
     if (!user || !user.userId) {
       return next('/'); // 無法辨識使用者，退回首頁
     }
-
-    try {
-      // 2. 向後端確認真實身分 (這是在開發者模式無法偽造的)
-      const res = await api.checkAdmin(user.userId);
-      if (res.data.isAdmin) {
-        return next(); // 是真管理員，放行
-      } else {
-        return next('/'); // 企圖非法進入，退回首頁
-      }
-    } catch (e) {
-      return next('/'); // 驗證出錯，退回首頁
-    }
+    
+    // 移除 await api.checkAdmin，改為直接放行
+    // 安全性由後端 API 擋，前端追求流暢體驗
+    return next();
   }
   
   next(); // 非管理員路徑，直接放行

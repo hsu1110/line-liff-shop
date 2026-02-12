@@ -205,9 +205,11 @@ function doPost(e) {
     }
 
     // --- 前端 API 路由 ---
-    // --- 前端 API 路由 ---
     const action = contents.action;
     
+    // 檢查是否為管理員操作 (以 "admin" 開頭)
+    if (action.startsWith('admin') || action === 'checkAdmin') {
+      
       // 簡化模式：直接檢查 userId (應使用者要求，移除 ID Token 驗證)
       const userId = contents.userId;
       const adminId = CONFIG.get(KEY.ADMIN_ID);

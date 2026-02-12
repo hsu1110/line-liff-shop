@@ -11,23 +11,29 @@ const router = useRouter();
 const cartStore = useCartStore();
 const isBumped = ref(false);
 const isAdmin = ref(false);
+const isInitializing = ref(true);
 
 onMounted(async () => {
-  await liffService.init();
-  
-  // 驗證管理員身份
-  const user = liffService.getUser();
-  
-  if (user?.userId) {
-    try {
-      const res = await api.checkAdmin(user.userId);
-      isAdmin.value = res.data.isAdmin;
-    } catch (e) {
-      console.error("Admin check failed", e);
+  try {
+    await liffService.init();
+    
+    // 驗證管理員身份
+    const user = liffService.getUser();
+    
+    if (user?.userId) {
+      try {
+        const res = await api.checkAdmin(user.userId);
+        isAdmin.value = res.data.isAdmin;
+      } catch (e) {
+        console.error("Admin check failed", e);
+      }
     }
+    
+    await router.isReady();
+  } finally {
+    // 無論成功失敗，最後都要結束讀取狀態，讓 User 能看到畫面 (或錯誤頁)
+    isInitializing.value = false;
   }
-  
-  await router.isReady();
 });
 
 // 監聽購物車總數變化，觸發跳動動畫
@@ -42,42 +48,84 @@ watch(() => cartStore.totalItems, (newVal, oldVal) => {
 </script>
 
 <template>
-  <main class="app-main">
-    <RouterView v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
-        <component :is="Component" />
-      </transition>
-    </RouterView>
-  </main>
+  <!-- 全局初始化 Loading -->
+  <div v-if="isInitializing" class="init-loading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
 
-  <TheToast ref="toastRef" />
+  <div v-else class="app-content">
+    <main class="app-main">
+      <RouterView v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </RouterView>
+    </main>
 
-  <nav class="bottom-nav">
-    <router-link to="/" class="nav-item">
-      <div class="icon">🏠</div>
-      <span>商城</span>
-    </router-link>
-    <router-link to="/cart" class="nav-item cart-btn" :class="{ 'bump': isBumped }">
-      <div class="icon-wrapper">
-        <div class="icon">🛒</div>
-        <div v-if="cartStore.totalItems > 0" class="badge">
-          {{ cartStore.totalItems }}
+    <TheToast ref="toastRef" />
+
+    <nav class="bottom-nav">
+      <router-link to="/" class="nav-item">
+        <div class="icon">🏠</div>
+        <span>商城</span>
+      </router-link>
+      <router-link to="/cart" class="nav-item cart-btn" :class="{ 'bump': isBumped }">
+        <div class="icon-wrapper">
+          <div class="icon">🛒</div>
+          <div v-if="cartStore.totalItems > 0" class="badge">
+            {{ cartStore.totalItems }}
+          </div>
         </div>
-      </div>
-      <span>購物車</span>
-    </router-link>
-    <router-link to="/history" class="nav-item">
-      <div class="icon">📜</div>
-      <span>訂單</span>
-    </router-link>
-    <router-link v-if="isAdmin" to="/admin/products" class="nav-item admin-btn">
-      <div class="icon">⚙️</div>
-      <span>管理</span>
-    </router-link>
-  </nav>
+        <span>購物車</span>
+      </router-link>
+      <router-link to="/history" class="nav-item">
+        <div class="icon">📜</div>
+        <span>訂單</span>
+      </router-link>
+      <router-link v-if="isAdmin" to="/admin/products" class="nav-item admin-btn">
+        <div class="icon">⚙️</div>
+        <span>管理</span>
+      </router-link>
+    </nav>
+  </div>
 </template>
 
 <style scoped>
+.init-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.init-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+.init-loading p {
+  color: var(--text-sub);
+  font-size: 14px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .app-main {
   padding-bottom: calc(80px + var(--safe-bottom));
 }

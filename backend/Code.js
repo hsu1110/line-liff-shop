@@ -720,7 +720,7 @@ function addProductToSheet(pid, name, price, imageUrl, status, createdAt) {
   // 欄位順序: pid, name, price, image_url, status, created_at
   sheet.appendRow([pid, name, price, imageUrl, status, createdAt]);
   
-  // 清除快取
+  // 清除快取，讓新商品即時顯示
   CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
 }
 

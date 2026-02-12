@@ -59,7 +59,7 @@ function goToProduct(pid) {
         <div class="p-info">
           <h3>{{ p.name }}</h3>
           <div class="card-footer">
-            <span class="status-tag" :class="p.status">{{ p.status === 'ON_SALE' ? '現貨' : '已售完' }}</span>
+            <span class="status-tag" :class="p.status">{{ p.status === 'AVAILABLE' ? '現貨' : '已售完' }}</span>
             <div class="go-btn">→</div>
           </div>
         </div>

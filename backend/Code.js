@@ -582,7 +582,7 @@ function handleAdminMessage(event, replyToken) {
             const name = lines[0].trim();
             const price = lines[1].trim(); 
             const pid = "P_" + new Date().getTime(); // 生成唯一 ID
-            const status = "ON_SALE";
+            const status = "AVAILABLE";
             const createdAt = new Date();
 
             // 1. 寫入 Google Sheet

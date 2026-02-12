@@ -40,7 +40,10 @@ onMounted(async () => {
   <div class="history-container">
     <h1>我的訂單</h1>
 
-    <div v-if="loading" class="loading">載入中...</div>
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>載入中...</p>
+    </div>
     <div v-else-if="errMsg" class="error">{{ errMsg }}</div>
     <div v-else-if="orders.length === 0" class="empty">尚無訂單記錄</div>
 
@@ -93,7 +96,21 @@ h1 {
   margin-bottom: 2rem;
   color: var(--text-main);
 }
-.loading, .empty, .error { text-align: center; padding: 3rem; color: var(--text-sub); }
+.loading-state, .empty, .error { text-align: center; padding: 3rem; color: var(--text-sub); }
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--glass-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
 
 .order-card {
   margin-bottom: 16px;

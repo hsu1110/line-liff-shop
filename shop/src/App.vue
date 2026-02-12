@@ -51,7 +51,7 @@ watch(() => cartStore.totalItems, (newVal, oldVal) => {
   <!-- 全局初始化 Loading -->
   <div v-if="isInitializing" class="init-loading">
     <div class="spinner"></div>
-    <p>Loading...</p>
+    <p>載入中...</p>
   </div>
 
   <div v-else class="app-content">

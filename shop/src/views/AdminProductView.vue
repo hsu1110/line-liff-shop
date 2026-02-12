@@ -57,6 +57,7 @@ onMounted(fetchProducts)
 
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
+      <p>載入中...</p>
     </div>
 
     <div v-else class="product-list">

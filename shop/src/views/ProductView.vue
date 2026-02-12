@@ -93,7 +93,7 @@ function updateQty(delta) {
   </div>
   <div v-else class="loading-state">
     <div class="spinner"></div>
-    <p>正在準備商品詳情</p>
+    <p>載入中...</p>
   </div>
 </template>
 

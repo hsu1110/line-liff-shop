@@ -740,6 +740,10 @@ function updateProductStatus(pid, newStatus) {
     if (data[i][0] == pid) {
       // status 在第 5 欄 (Index 4) -> 對應 Row i+1, Col 5
       sheet.getRange(i + 1, 5).setValue(newStatus);
+      
+      // 清除快取
+      CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
+      
       return data[i][1]; // 回傳商品名稱 (Index 1)
     }
   }
@@ -793,7 +797,7 @@ function updateProduct(data) {
           sheet.getRange(i + 1, 5).setValue(data.status);
           
           // 清除快取
-          CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
+          CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
           return { status: 'success' };
         }
       }
@@ -823,7 +827,7 @@ function deleteProduct(pid) {
         if (rows[i][0] === pid) {
           sheet.deleteRow(i + 1);
           // 清除快取
-          CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
+          CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
           return { status: 'success' };
         }
       }
@@ -1079,7 +1083,7 @@ function createProductCard(pid, name, price, imageUrl) {
             "color": "#1E90FF",
             "action": {
               "type": "uri",
-              "uri": `https://liff.line.me/${CONFIG.get(KEY.LIFF_ID)}/#/product/${pid}?action=share`, // 分享也改用 Hash
+              "uri": `https://line.me/R/msg/text/?${encodeURIComponent(name + " " + price + "\n" + liffUrl)}`,
               "label": "📤 分享小卡",
             },
           },

@@ -25,8 +25,9 @@ function goToProduct(pid) {
       <p class="subtitle">日本代購精選商城</p>
     </header>
     
-    <div v-if="loading" class="loading-state">
+    <div v-if="productStore.loading" class="loading-state">
       <div class="spinner"></div>
+      <p class="loading-text">載入中...</p>
       <p class="loading-dots">載入日本直送精品</p>
     </div>
 
@@ -105,7 +106,7 @@ function goToProduct(pid) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.6s ease out both;
+  animation: slideUp 0.6s ease-out both;
   cursor: pointer;
 }
 
@@ -118,6 +119,7 @@ function goToProduct(pid) {
   position: relative;
   aspect-ratio: 1/1;
   background: #f0f0f0;
+  overflow: hidden;
 }
 
 .img-wrapper img {
@@ -127,7 +129,8 @@ function goToProduct(pid) {
   transition: transform 0.5s ease;
 }
 
-.product-card:hover .img-wrapper img {
+.product-card:hover .img-wrapper img,
+.product-card:hover .sold-out-overlay {
   transform: scale(1.1);
 }
 
@@ -142,6 +145,7 @@ function goToProduct(pid) {
   backdrop-filter: blur(5px);
   font-weight: 600;
   font-size: 0.9rem;
+  z-index: 20;
 }
 
 .p-info {
@@ -150,6 +154,7 @@ function goToProduct(pid) {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: white;
 }
 
 .p-info h3 {
@@ -177,7 +182,7 @@ function goToProduct(pid) {
 }
 
 .status-tag.AVAILABLE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
-.status-tag.SOLD_OUT { background: rgba(0,0,0,0.05); color: var(--text-sub); }
+.status-tag.SOLD_OUT { background: rgba(255, 118, 117, 0.1); color: #d63031; }
 
 .go-btn {
   width: 24px;
@@ -203,9 +208,11 @@ function goToProduct(pid) {
 
 .sold-out-overlay span {
   padding: 8px 16px;
-  border: 2px solid var(--text-main);
+  border: 3px solid #e17055;
+  color: #e17055;
   font-weight: 900;
   transform: rotate(-15deg);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .loading-state, .empty-state, .error-state {

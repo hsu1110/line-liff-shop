@@ -39,6 +39,11 @@ const liffService = {
     return this.profile
   },
   
+  getIDToken() {
+    if (this.isMock) return "MOCK_TOKEN"
+    return liff.getIDToken()
+  },
+  
   isInClient() {
     if (this.isMock) return false
     return liff.isInClient()

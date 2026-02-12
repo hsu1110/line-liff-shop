@@ -17,10 +17,11 @@ onMounted(async () => {
   
   // 驗證管理員身份
   const user = liffService.getUser();
+  const idToken = liffService.getIDToken();
   
-  if (user?.userId) {
+  if (user?.userId && idToken) {
     try {
-      const res = await api.checkAdmin(user.userId);
+      const res = await api.checkAdmin(idToken);
       isAdmin.value = res.data.isAdmin;
     } catch (e) {
       console.error("Admin check failed", e);

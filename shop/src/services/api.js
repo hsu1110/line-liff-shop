@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-// 引用原本的 GAS 網址 (從 index.html 抄來的)
-const API_URL = "https://script.google.com/macros/s/AKfycbza_R4p07vetWGk44_P1rnqZh4-oZ4vN7Od74MUP7x0hvIGNTcTNwPx1haaCtBFzPej/exec";
+// 使用環境變數 (Vite)
+const API_URL = import.meta.env.VITE_API_URL;
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -26,37 +26,38 @@ export default {
     }))
   },
 
-  // --- 管理員 API ---
-  checkAdmin(userId) {
+  // --- 管理員 API (需傳送 idToken) ---
+  checkAdmin(idToken) {
     return apiClient.post('', JSON.stringify({
       action: 'checkAdmin',
-      userId: userId
+      idToken: idToken
     }))
   },
-  adminUpdateProduct(userId, productData) {
+  // 修改: 統一改傳 idToken，User ID 由後端解碼
+  adminUpdateProduct(idToken, productData) {
     return apiClient.post('', JSON.stringify({
       action: 'adminUpdateProduct',
-      userId: userId,
+      idToken: idToken,
       data: productData
     }))
   },
-  adminDeleteProduct(userId, pid) {
+  adminDeleteProduct(idToken, pid) {
     return apiClient.post('', JSON.stringify({
       action: 'adminDeleteProduct',
-      userId: userId,
+      idToken: idToken,
       pid: pid
     }))
   },
-  adminGetAllOrders(userId) {
+  adminGetAllOrders(idToken) {
     return apiClient.post('', JSON.stringify({
       action: 'adminGetAllOrders',
-      userId: userId
+      idToken: idToken
     }))
   },
-  adminUpdateOrder(userId, orderId, status) {
+  adminUpdateOrder(idToken, orderId, status) {
     return apiClient.post('', JSON.stringify({
       action: 'adminUpdateOrder',
-      userId: userId,
+      idToken: idToken,
       orderId: orderId,
       status: status
     }))

@@ -10,8 +10,10 @@ const userId = liffService.getUser()?.userId
 
 const fetchOrders = async () => {
   loading.value = true
+  // 改為取得 ID Token
+  const idToken = liffService.getIDToken()
   try {
-    const res = await api.adminGetAllOrders(userId)
+    const res = await api.adminGetAllOrders(idToken)
     orders.value = res.data.data
   } finally {
     loading.value = false
@@ -29,8 +31,9 @@ const groupedOrders = computed(() => {
 })
 
 const updateStatus = async (orderId, newStatus) => {
+  const idToken = liffService.getIDToken()
   try {
-    await api.adminUpdateOrder(userId, orderId, newStatus)
+    await api.adminUpdateOrder(idToken, orderId, newStatus)
     // 更新本地狀態
     orders.value.forEach(o => {
       if (o.orderId === orderId) o.status = newStatus

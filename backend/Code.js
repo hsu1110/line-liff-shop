@@ -41,7 +41,8 @@ const KEY = {
   ADMIN_ID: "ADMIN_ID",
   CLOUD_NAME: "CLOUDINARY_NAME",
   CLOUD_PRESET: "CLOUDINARY_PRESET",
-  LIFF_ID: "LIFF_ID" // 新增 LIFF ID
+  LIFF_ID: "LIFF_ID",
+  CHANNEL_ID: "CHANNEL_ID" // 新增 Channel ID
 };
 
 // ==========================================
@@ -72,7 +73,8 @@ function setup() {
       ["ADMIN_ID", "請填入你的 User ID"],
       ["CLOUDINARY_NAME", "請填入 Cloud Name"],
       ["CLOUDINARY_PRESET", "請填入 Upload Preset (Unsigned)"],
-      ["LIFF_ID", "請填入 LIFF ID (稍後申請)"]
+      ["LIFF_ID", "請填入 LIFF ID"],
+      ["CHANNEL_ID", "請填入 Channel ID (用於驗證管理員)"]
     ]);
     // 美化一下
     configSheet.setColumnWidth(1, 200);
@@ -203,34 +205,51 @@ function doPost(e) {
     }
 
     // --- 前端 API 路由 ---
-    const action = contents.action; // [Fix] Re-add missing declaration
+    // --- 前端 API 路由 ---
+    const action = contents.action;
+    
+    // 檢查是否為管理員操作 (以 "admin" 開頭)
+    if (action.startsWith('admin') || action === 'checkAdmin') {
+      // 強制驗證 ID Token
+      const idToken = contents.idToken;
+      const realUserId = verifyIdToken(idToken);
+      
+      if (!realUserId || realUserId !== CONFIG.get(KEY.ADMIN_ID)) {
+          // 如果是 localhost 開發或測試，允許 MOCK_TOKEN (僅當後端也開啟 DEBUG 模式時? 還是直接擋掉?)
+          // 安全起見，直接阻擋。開發者需使用真實 Token 或自行處理。
+          return createJSONOutput({ status: 'error', message: 'Unauthorized: Invalid or Missing Identity' });
+      }
+      
+      // 驗證通過，執行管理員邏輯
+      switch (action) {
+        case 'checkAdmin':
+             return createJSONOutput({ isAdmin: true, status: 'success' }); // 能過 verifyIdToken 且 ID 吻合就是 Admin
+
+        case 'adminUpdateProduct':
+            return createJSONOutput(updateProduct(contents.data));
+            
+        case 'adminDeleteProduct':
+            return createJSONOutput(deleteProduct(contents.pid));
+            
+        case 'adminGetAllOrders':
+            return createJSONOutput({ status: 'success', data: getAdminOrders() });
+            
+        case 'adminUpdateOrder':
+            return createJSONOutput(updateOrderStatus(contents.orderId, contents.status));
+      }
+    }
+
+    // 一般使用者路由
     switch (action) {
       case 'submitOrder':
         return createJSONOutput(submitOrder(contents.data));
-      
-      // --- 管理員專屬 API ---
-      case 'checkAdmin':
-        return createJSONOutput({ isAdmin: contents.userId === CONFIG.get(KEY.ADMIN_ID) });
-      
-      case 'adminGetProducts':
-        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
-        return createJSONOutput({ status: 'success', data: getAllProducts() }); // 這裡暫時用 getAllProducts，但管理員應該能看更多
+
+      case 'getProducts': // 補回 getProducts
+        return createJSONOutput({ status: "success", data: getAllProducts() });
         
-      case 'adminUpdateProduct':
-        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
-        return createJSONOutput(updateProduct(contents.data));
-        
-      case 'adminDeleteProduct':
-        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
-        return createJSONOutput(deleteProduct(contents.pid));
-        
-      case 'adminGetAllOrders':
-        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
-        return createJSONOutput({ status: 'success', data: getAdminOrders() });
-        
-      case 'adminUpdateOrder':
-        if (contents.userId !== CONFIG.get(KEY.ADMIN_ID)) throw new Error("Unauthorized");
-        return createJSONOutput(updateOrderStatus(contents.orderId, contents.status));
+      case 'getOrders': // 補回 getOrders
+        const userId = contents.userId; // 一般使用者還是可以用 userId 查自己訂單 (或也可升級成 verifyIdToken，但這裡先維持原樣以免改太多)
+        return createJSONOutput({ status: "success", data: getOrders(userId) });
 
       default:
         return createJSONOutput({ status: "error", message: "Unknown Action: " + action });
@@ -600,6 +619,51 @@ function getLineContent(messageId) {
 }
 
 /**
+ * 驗證 LINE ID Token
+ * @return {string|null} userId 成功回傳 User ID，失敗回傳 null
+ */
+function verifyIdToken(idToken) {
+  if (!idToken) return null;
+  if (idToken === "MOCK_TOKEN") return null; // 拒絕 Mock Token
+  
+  const channelId = CONFIG.get(KEY.CHANNEL_ID);
+  if (!channelId) {
+    Logger.log("❌ Missing CHANNEL_ID in Config");
+    return null;
+  }
+
+  const url = "https://api.line.me/oauth2/v2.1/verify";
+  const payload = {
+    id_token: idToken,
+    client_id: channelId
+  };
+
+  try {
+    const options = {
+      method: 'post',
+      payload: payload, // Form UrlEncoded
+      muteHttpExceptions: true
+    };
+    const response = UrlFetchApp.fetch(url, options);
+    const data = JSON.parse(response.getContentText());
+    
+    if (data.error) {
+      Logger.log("Token Verify Error: " + data.error_description);
+      return null;
+    }
+    
+    // 檢查是否過期 (雖然 API 會檢查，但雙重確認)
+    // data.exp is in seconds
+    // API 已經幫忙檢查 nonce, aud, exp, iss
+    
+    return data.sub; // User ID
+  } catch (e) {
+    Logger.log("Verify Exception: " + e.toString());
+    return null;
+  }
+}
+
+/**
  * 上傳圖片到 Cloudinary (Unsigned Upload)
  */
 function uploadToCloudinary(imageBlob) {
@@ -681,40 +745,70 @@ function saveLog(type, content) {
  * 📦 更新商品資訊 (管理員)
  */
 function updateProduct(data) {
-  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
-  const rows = sheet.getDataRange().getValues();
-  
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === data.pid) {
-      // 依序更新：名稱、描述、價格、圖片、狀態、規格
-      sheet.getRange(i + 1, 2).setValue(data.name);
-      sheet.getRange(i + 1, 3).setValue(data.description);
-      sheet.getRange(i + 1, 4).setValue(data.price);
-      sheet.getRange(i + 1, 5).setValue(data.image_url);
-      sheet.getRange(i + 1, 6).setValue(data.status);
-      sheet.getRange(i + 1, 7).setValue(data.specs);
-      return { status: 'success' };
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(5000)) {
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+      const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+      const rows = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === data.pid) {
+          // 依序更新：名稱、描述、價格、圖片、狀態、規格
+          // 確保欄位對應正確:
+          // Col 2: Name
+          // Col 3: Price
+          // Col 4: ImageUrl
+          // Col 5: Status
+          // Col 6: CreatedAt (不改)
+          // 這裡原代碼似乎有錯，原代碼：
+          // sheet.getRange(i + 1, 2).setValue(data.name);
+          // sheet.getRange(i + 1, 3).setValue(data.description); // Products 表原本沒有 description 欄位? setup() 只有 6 欄
+          // setup(): ["pid", "name", "price", "image_url", "status", "created_at"]
+          // 需要小心，這裡只更新存在的欄位
+          
+          sheet.getRange(i + 1, 2).setValue(data.name);
+          sheet.getRange(i + 1, 3).setValue(data.price);
+          sheet.getRange(i + 1, 4).setValue(data.image_url);
+          sheet.getRange(i + 1, 5).setValue(data.status);
+          
+          return { status: 'success' };
+        }
+      }
+      return { status: 'error', message: '找不到商品' };
+    } catch(e) {
+      return { status: 'error', message: e.toString() };
+    } finally {
+      lock.releaseLock();
     }
+  } else {
+    return { status: 'error', message: '系統忙碌中' };
   }
-  return { status: 'error', message: '找不到商品' };
 }
 
 /**
  * 🗑️ 刪除商品 (管理員)
  */
 function deleteProduct(pid) {
-  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
-  const rows = sheet.getDataRange().getValues();
-  
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === pid) {
-      sheet.deleteRow(i + 1);
-      return { status: 'success' };
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(5000)) {
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+      const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+      const rows = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === pid) {
+          sheet.deleteRow(i + 1);
+          return { status: 'success' };
+        }
+      }
+      return { status: 'error', message: '找不到商品' };
+    } finally {
+      lock.releaseLock();
     }
   }
-  return { status: 'error', message: '找不到商品' };
+  return { status: 'error', message: '系統忙碌中' };
 }
 
 /**
@@ -747,18 +841,26 @@ function getAdminOrders() {
  * ✅ 更新訂單狀態 (管理員)
  */
 function updateOrderStatus(orderId, status) {
-  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
-  const rows = sheet.getDataRange().getValues();
-  
-  let count = 0;
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === orderId) {
-      sheet.getRange(i + 1, 10).setValue(status);
-      count++;
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(5000)) {
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+      const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+      const rows = sheet.getDataRange().getValues();
+      
+      let count = 0;
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i][0] === orderId) {
+          sheet.getRange(i + 1, 10).setValue(status);
+          count++;
+        }
+      }
+      return count > 0 ? { status: 'success' } : { status: 'error', message: '找不到訂單' };
+    } finally {
+      lock.releaseLock();
     }
   }
-  return count > 0 ? { status: 'success' } : { status: 'error', message: '找不到訂單' };
+  return { status: 'error', message: '系統忙碌中' };
 }
 
 /**

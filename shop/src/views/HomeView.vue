@@ -1,29 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from '../services/api'
 import { useRouter } from 'vue-router'
+import { useProductStore } from '../stores/product'
+import { storeToRefs } from 'pinia'
 import { optimizeImage } from '../services/image'
 
-const products = ref([])
-const loading = ref(true)
-const errMsg = ref('')
+const productStore = useProductStore()
+const { products, loading, error } = storeToRefs(productStore)
 const router = useRouter()
 
-onMounted(async () => {
-  try {
-    const res = await api.getProducts()
-    if (res.data.status === 'success') {
-      products.value = res.data.data
-    } else {
-      console.error(res.data.message)
-      errMsg.value = res.data.message || "無法取得商品列表，請稍後再試"
-    }
-  } catch (e) {
-    console.error(e)
-    errMsg.value = "網路連線錯誤，請檢查網路狀態"
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  productStore.fetchProducts()
 })
 
 function goToProduct(pid) {
@@ -43,9 +30,9 @@ function goToProduct(pid) {
       <p class="loading-dots">載入日本直送精品</p>
     </div>
 
-    <div v-else-if="errMsg" class="error-state glass-card">
+    <div v-else-if="error" class="error-state glass-card">
       <div class="icon">⚠️</div>
-      <p>{{ errMsg }}</p>
+      <p>{{ error }}</p>
       <button @click="window.location.reload()" class="retry-btn">重新嘗試</button>
     </div>
 

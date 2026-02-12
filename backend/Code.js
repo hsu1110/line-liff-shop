@@ -336,7 +336,19 @@ function getProductInfo(pid) {
 /**
  * [API] 取得所有上架商品 (供 V2 首頁使用)
  */
+/**
+ * [API] 取得所有上架商品 (供 V2 首頁使用)
+ * (已加入快取機制)
+ */
 function getAllProducts() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = "ALL_PRODUCTS_V2";
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
   const data = sheet.getDataRange().getValues();
   const products = [];
@@ -355,7 +367,11 @@ function getAllProducts() {
       });
     }
   }
-  return products.reverse(); // 新的上架排前面
+  const result = products.reverse(); // 新的上架排前面
+  
+  // 寫入快取 (20分鐘)
+  cache.put(cacheKey, JSON.stringify(result), 1200);
+  return result;
 }
 
 /**
@@ -710,6 +726,9 @@ function addProductToSheet(pid, name, price, imageUrl, status, createdAt) {
   );
   // 欄位順序: pid, name, price, image_url, status, created_at
   sheet.appendRow([pid, name, price, imageUrl, status, createdAt]);
+  
+  // 清除快取
+  CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
 }
 
 /**
@@ -776,6 +795,8 @@ function updateProduct(data) {
           sheet.getRange(i + 1, 4).setValue(data.image_url);
           sheet.getRange(i + 1, 5).setValue(data.status);
           
+          // 清除快取
+          CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
           return { status: 'success' };
         }
       }
@@ -804,6 +825,8 @@ function deleteProduct(pid) {
       for (let i = 1; i < rows.length; i++) {
         if (rows[i][0] === pid) {
           sheet.deleteRow(i + 1);
+          // 清除快取
+          CacheService.getScriptCache().remove("ALL_PRODUCTS_V2");
           return { status: 'success' };
         }
       }

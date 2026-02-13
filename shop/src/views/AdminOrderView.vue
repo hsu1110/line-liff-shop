@@ -240,7 +240,7 @@ onMounted(fetchOrders)
   gap: 12px;
 }
 
-.sub-nav-btn {
+.primary-btn, .sub-nav-btn {
   background: var(--primary);
   color: white;
   padding: 8px 16px;

@@ -45,6 +45,27 @@ onMounted(async () => {
   }
 })
 
+const orderStats = computed(() => {
+  const stats = { total: 0, processing: 0, shipped: 0, completed: 0, cancelled: 0 }
+  const uniqueOrders = new Map()
+
+  orders.value.forEach(o => {
+    if (!uniqueOrders.has(o.order_id)) {
+      uniqueOrders.set(o.order_id, o.order_status)
+    }
+  })
+
+  stats.total = uniqueOrders.size
+  uniqueOrders.forEach(status => {
+    if (!status || status === '處理中') stats.processing++
+    else if (status === '已發貨') stats.shipped++
+    else if (status === '已完成') stats.completed++
+    else if (status === '已取消') stats.cancelled++
+  })
+
+  return stats
+})
+
 // 狀態樣式對照
 const getStatusClass = (status) => {
   switch (status) {
@@ -58,7 +79,42 @@ const getStatusClass = (status) => {
 
 <template>
   <div class="history-container">
-    <h1>我的訂單</h1>
+    <header class="admin-header glass-card">
+      <div class="header-main">
+        <div class="header-info">
+          <h1>我的訂單</h1>
+          <p class="admin-subtitle">查看訂單紀錄與配送狀態</p>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">總訂單</span>
+          <span class="stat-value">{{ orderStats.total }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">處理中</span>
+          <span class="stat-value processing">{{ orderStats.processing }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已發貨</span>
+          <span class="stat-value shipped">{{ orderStats.shipped }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已完成</span>
+          <span class="stat-value completed">{{ orderStats.completed }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已取消</span>
+          <span class="stat-value cancelled">{{ orderStats.cancelled }}</span>
+        </div>
+      </div>
+    </header>
 
     <!-- 篩選標籤列 -->
     <div class="filter-bar">
@@ -124,11 +180,71 @@ const getStatusClass = (status) => {
   margin: 0 auto;
   padding-bottom: 120px;
 }
-h1 {
-  font-size: 1.8rem;
-  margin-bottom: 2rem;
+
+/* Unified Header Styles */
+.admin-header {
+  padding: 24px;
+  margin-bottom: 24px;
+  border-radius: 20px;
+}
+
+.header-main {
+  margin-bottom: 20px;
+}
+
+.header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.admin-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--text-main);
 }
+
+.stat-value.processing { color: #f39c12; }
+.stat-value.shipped { color: #3498db; }
+.stat-value.completed { color: var(--primary); }
+.stat-value.cancelled { color: #95a5a6; }
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--glass-border);
+}
+
 .loading-state, .empty, .error { text-align: center; padding: 3rem; color: var(--text-sub); }
 
 /* Filter Bar Styles */
@@ -136,8 +252,8 @@ h1 {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
+  padding: 4px 0 16px 0;
+  margin-bottom: 12px;
   scrollbar-width: none; 
   -ms-overflow-style: none;
 }
@@ -149,7 +265,7 @@ h1 {
   border-radius: 20px;
   background: white;
   color: var(--text-sub);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   border: 1px solid var(--glass-border);
   transition: all 0.2s;

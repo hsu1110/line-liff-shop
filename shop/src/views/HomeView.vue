@@ -18,9 +18,31 @@ function goToProduct(pid) {
 
 <template>
   <div class="home-container">
-    <header class="home-header">
-      <h1>Nanikore.c</h1>
-      <p class="subtitle">日本代購精選商城</p>
+    <header class="admin-header glass-card">
+      <div class="header-main">
+        <div class="header-info">
+          <h1 class="logo-text">Nanikore.c</h1>
+          <p class="admin-subtitle">日本代購精選商城・精品推薦</p>
+        </div>
+      </div>
+
+      <!-- Stats Bar (Shop Perspective) -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">全站商品</span>
+          <span class="stat-value">{{ productStore.displayProducts.length }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">現貨供應</span>
+          <span class="stat-value available">{{ productStore.displayProducts.filter(p => p.status === 'AVAILABLE').length }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已售完</span>
+          <span class="stat-value sold-out">{{ productStore.displayProducts.filter(p => p.status === 'SOLD_OUT').length }}</span>
+        </div>
+      </div>
     </header>
     
     <div v-if="productStore.loading && productStore.allProducts.length === 0" class="loading-state">
@@ -60,24 +82,71 @@ function goToProduct(pid) {
   margin: 0 auto;
 }
 
-.home-header {
-  margin-bottom: 2rem;
-  text-align: center;
+/* Unified Header Styles */
+.admin-header {
+  padding: 24px;
+  margin-bottom: 32px;
+  border-radius: 20px;
 }
 
-.home-header h1 {
-  font-size: 2rem;
+.header-main {
+  margin-bottom: 24px;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: 800;
   background: linear-gradient(45deg, var(--primary), #20bf6b);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
 }
 
-.subtitle {
-  color: var(--text-sub);
+.admin-subtitle {
   font-size: 0.9rem;
-  letter-spacing: 2px;
+  color: var(--text-sub);
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Shop specific stat colors */
+.stat-value.available { color: var(--primary); }
+.stat-value.sold-out { color: #d63031; }
+.text-primary { color: var(--primary); }
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--glass-border);
 }
 
 .product-grid {

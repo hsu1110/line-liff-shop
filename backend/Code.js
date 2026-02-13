@@ -535,10 +535,10 @@ function submitOrder(formData) {
  */
 function pushToAdmin(message) {
   const configVal = CONFIG.get(KEY.ADMIN_ID) || "";
-  // 取得所有管理員 ID (排除 MOCK_ADMIN_001)
+  // 取得所有管理員 ID (排除 BROWSER_TEST_USER)
   const adminIds = configVal.toString().split(',')
     .map(id => id.trim())
-    .filter(id => id && id !== "MOCK_ADMIN_001");
+    .filter(id => id && id !== "BROWSER_TEST_USER");
 
   if (adminIds.length > 0) {
      // LINE Push Message 一次只能推給一個 User (除非是用 Multicast，但這裡簡單起見用迴圈或 Multicast)

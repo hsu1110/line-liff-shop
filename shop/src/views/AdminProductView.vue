@@ -196,8 +196,6 @@ onMounted(fetchProducts)
 .header-main {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
 }
 
 .header-info h1 {

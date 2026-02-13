@@ -39,7 +39,7 @@ body {
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
+  border: px solid var(--glass-border);
   border-radius: 16px;
   box-shadow: var(--glass-shadow);
 }

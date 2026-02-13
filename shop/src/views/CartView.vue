@@ -76,9 +76,26 @@ async function checkout() {
 
 <template>
   <div class="cart-container">
-    <header class="cart-header">
-      <h1>購物車</h1>
-      <span class="count">{{ cartStore.totalItems }} 件商品</span>
+    <header class="admin-header glass-card">
+      <div class="header-main">
+        <div class="header-info">
+          <h1>我的購物車</h1>
+          <p class="admin-subtitle">確認購買品項與金額</p>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">商品數</span>
+          <span class="stat-value">{{ cartStore.totalItems }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">預計總額</span>
+          <span class="stat-value available">$ {{ cartStore.totalPrice }}</span>
+        </div>
+      </div>
     </header>
 
     <div v-if="items.length === 0" class="empty-cart glass-card">
@@ -128,21 +145,65 @@ async function checkout() {
   margin: 0 auto;
 }
 
-.cart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 2rem;
+/* Unified Header Styles */
+.admin-header {
+  padding: 24px;
+  margin-bottom: 32px;
+  border-radius: 20px;
 }
 
-.cart-header h1 {
-  font-size: 1.8rem;
+.header-main {
+  margin-bottom: 24px;
+}
+
+.header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.admin-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--text-main);
 }
 
-.cart-header .count {
-  color: var(--text-sub);
-  font-size: 0.9rem;
+.stat-value.available { color: var(--primary); }
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--glass-border);
 }
 
 .empty-cart {

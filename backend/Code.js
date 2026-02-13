@@ -212,9 +212,8 @@ function doPost(e) {
       
       // 簡化模式：直接檢查 userId (應使用者要求，移除 ID Token 驗證)
       const userId = contents.userId;
-      const adminId = CONFIG.get(KEY.ADMIN_ID);
-      
-      if (!userId || userId !== adminId) {
+
+      if (!isAdmin(userId)) {
           return createJSONOutput({ status: 'error', message: 'Unauthorized: Admin ID Mismatch' });
       }
       
@@ -266,14 +265,24 @@ function handleLineWebhook(contents) {
     const event = contents.events[0];
     const replyToken = event.replyToken;
     const userId = event.source.userId;
-    const adminId = CONFIG.get(KEY.ADMIN_ID);
 
-    if (userId === adminId) {
+    if (isAdmin(userId)) {
       handleAdminMessage(event, replyToken);
     } else {
       // 處理一般使用者訊息 (例如: 接收 LIFF 傳來的 "我已下單" 並回覆)
       handleUserMessage(event, replyToken);
     }
+}
+
+/**
+ * 核心：判斷是否為管理員 (支援多重 ID)
+ */
+function isAdmin(userId) {
+  if (!userId) return false;
+  // 安全性設定 (如 ADMIN_ID) 不快取
+  const configVal = getValFromConfigSheet(KEY.ADMIN_ID) || "";
+  const adminIds = configVal.toString().split(',').map(id => id.trim());
+  return adminIds.includes(userId);
 }
 
 /**
@@ -380,30 +389,45 @@ function getAllProducts() {
  * [API] 取得訂單記錄 (供 V2 History 使用)
  */
 function getOrders(targetUserId) {
-  const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(CONFIG.SHEET_TAB.ORDERS);
-  const data = sheet.getDataRange().getValues();
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const orderSheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const productSheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+  
+  const ordersData = orderSheet.getDataRange().getValues();
+  const productsData = productSheet.getDataRange().getValues();
+  
+  // 建立 Product ID -> Image URL 的 Map
+  const productMap = {};
+  for (let i = 1; i < productsData.length; i++) {
+    const pid = productsData[i][0];
+    const img = productsData[i][3];
+    productMap[pid] = img;
+  }
+  
   const userOrders = [];
 
   // 跳過標題列
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 1; i < ordersData.length; i++) {
     // 欄位對應: [OrderId, Time, User, PID, ItemName, Spec, Qty, Total]
     // User ID 在第 4 欄 (Index 3)
-    const orderUserId = data[i][3];
+    const orderUserId = ordersData[i][3];
     
     if (orderUserId === targetUserId) {
-      const qty = data[i][7];
-      const total = data[i][8];
+      const pid = ordersData[i][4];
+      const qty = ordersData[i][7];
+      const total = ordersData[i][8];
       
       userOrders.push({
-        order_id: data[i][0],
-        time: Utilities.formatDate(new Date(data[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
-        user_name: data[i][2],
-        item_name: data[i][5],
-        spec: data[i][6],
+        order_id: ordersData[i][0],
+        time: Utilities.formatDate(new Date(ordersData[i][1]), "GMT+8", "yyyy/MM/dd HH:mm"),
+        user_name: ordersData[i][2],
+        item_name: ordersData[i][5],
+        spec: ordersData[i][6],
         qty: qty,
         total: total,
         price: qty > 0 ? (total / qty) : 0, 
-        order_status: data[i][9]
+        order_status: ordersData[i][9],
+        image_url: productMap[pid] || "" // 加入圖片網址
       });
     }
   }
@@ -507,9 +531,26 @@ function submitOrder(formData) {
  * 推播給管理員
  */
 function pushToAdmin(message) {
-  const adminId = CONFIG.get(KEY.ADMIN_ID);
-  if (adminId) {
-     pushMessage(adminId, [{type: 'text', text: message}]);
+  const configVal = CONFIG.get(KEY.ADMIN_ID) || "";
+  // 取得所有管理員 ID (排除 MOCK_ADMIN_001)
+  const adminIds = configVal.toString().split(',')
+    .map(id => id.trim())
+    .filter(id => id && id !== "MOCK_ADMIN_001");
+
+  if (adminIds.length > 0) {
+     // LINE Push Message 一次只能推給一個 User (除非是用 Multicast，但這裡簡單起見用迴圈或 Multicast)
+     // Multicast 比較好: pushMessage(to, messages) 的 to 可以是陣列
+     // 但要注意 pushMessage 實作是否支援陣列? 
+     // 檢查 pushMessage 實作: return UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", ...)
+     // LINE Messaging API 的 Push Message 'to' 只能是 String (ID)。
+     // Multicast 才是 Array。 https://api.line.me/v2/bot/message/multicast
+     
+     // 為了相容現有 pushMessage (單發)，我們先用迴圈，或者改用 Multicast。
+     // 為了保險，先用迴圈 (量不多的話)
+     
+     adminIds.forEach(adminId => {
+       pushMessage(adminId, [{type: 'text', text: message}]);
+     });
   }
 }
 
@@ -844,22 +885,37 @@ function deleteProduct(pid) {
  */
 function getAdminOrders() {
   const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
-  const rows = sheet.getDataRange().getValues();
+  const orderSheet = ss.getSheetByName(CONFIG.SHEET_TAB.ORDERS);
+  const productSheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+  
+  const rows = orderSheet.getDataRange().getValues();
+  const productsData = productSheet.getDataRange().getValues();
+  
+  // 建立 Product ID -> Image URL 的 Map
+  const productMap = {};
+  for (let i = 1; i < productsData.length; i++) {
+    const pid = productsData[i][0];
+    const img = productsData[i][3];
+    productMap[pid] = img;
+  }
+  
   const orders = [];
   
   for (let i = rows.length - 1; i >= 1; i--) {
+    const pid = rows[i][4];
     orders.push({
       orderId: rows[i][0],
       time: rows[i][1],
       userName: rows[i][2],
       userId: rows[i][3],
-      pid: rows[i][4],
+      pid: pid,
       productName: rows[i][5],
       spec: rows[i][6],
       qty: rows[i][7],
-      amount: rows[i][8],
-      status: rows[i][9]
+      qty: rows[i][7],
+      total: rows[i][8],
+      status: rows[i][9],
+      image_url: productMap[pid] || ""
     });
   }
   return orders;

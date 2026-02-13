@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
 import liffService from '../services/liff'
-import { optimizeImage } from '../services/image'
 import { showToast } from '../services/toast'
+import ProductCard from '../components/ProductCard.vue'
 
 const products = ref([])
 const loading = ref(true)
@@ -60,26 +60,22 @@ onMounted(fetchProducts)
       <p>載入中...</p>
     </div>
 
-    <div v-else class="product-list">
-      <div v-for="p in products" :key="p.pid" class="admin-card glass-card">
-        <div class="card-main">
-          <img :src="optimizeImage(p.image_url, 200)" class="thumb" />
-          <div class="info">
-            <h3>{{ p.name }}</h3>
-            <p class="price">$ {{ p.price }}</p>
-            <div class="status-tag" :class="p.status">
-              {{ p.status === 'AVAILABLE' ? '上架中' : '已售完' }}
-            </div>
+    <div v-else class="product-grid">
+      <ProductCard 
+        v-for="p in products" 
+        :key="p.pid" 
+        :product="p"
+        :show-status="false"
+      >
+        <template #footer>
+          <div class="admin-actions">
+            <button @click.stop="toggleStatus(p)" class="action-btn status" :class="p.status">
+              {{ p.status === 'AVAILABLE' ? '設為售完' : '設為上架' }}
+            </button>
+            <button @click.stop="deleteProduct(p.pid)" class="action-btn delete">刪除</button>
           </div>
-        </div>
-        
-        <div class="card-actions">
-          <button @click="toggleStatus(p)" class="action-btn status">
-            {{ p.status === 'AVAILABLE' ? '設為售完' : '設為上架' }}
-          </button>
-          <button @click="deleteProduct(p.pid)" class="action-btn delete">刪除</button>
-        </div>
-      </div>
+        </template>
+      </ProductCard>
     </div>
   </div>
 </template>
@@ -109,79 +105,61 @@ h1 {
   font-weight: 600;
 }
 
-.admin-card {
-  margin-bottom: 16px;
-  padding: 16px;
+.loading-state {
+  padding: 4rem 2rem;
+  text-align: center;
 }
 
-.card-main {
-  display: flex;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--glass-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  animation: rotate 1s linear infinite;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin-bottom: 16px;
 }
 
-.thumb {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 8px;
+@media (min-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
-.info {
-  flex: 1;
-}
-
-.info h3 {
-  font-size: 1rem;
-  margin-bottom: 4px;
-}
-
-.price {
-  color: var(--accent);
-  font-weight: bold;
-}
-
-.status-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  margin-top: 4px;
-}
-
-.status-tag.AVAILABLE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
-.status-tag.SOLD_OUT { background: rgba(0, 0, 0, 0.05); color: var(--text-sub); }
-
-.card-actions {
+/* Slot 注入的按鈕樣式 */
+.admin-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
 }
 
 .action-btn {
   flex: 1;
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
+  color: white;
 }
 
-.action-btn.status { background: rgba(0,0,0,0.05); color: var(--text-main); }
-.action-btn.delete { background: rgba(255, 118, 117, 0.1); color: #ff7675; }
-
-.loading-state {
-  display: flex;
-  justify-content: center;
-  padding: 50px;
+.action-btn.status {
+  background: var(--primary);
+  color: white;
 }
 
-.spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid rgba(0,0,0,0.1);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: rotate 1s linear infinite;
+.action-btn.delete {
+  background: #dfe6e9; /* 淺灰 */
+  color: #636e72;       /* 深灰文字 */
+  flex: 0 0 40px;       /* 固定寬度 */
 }
 
-@keyframes rotate { to { transform: rotate(360deg); } }
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
 </style>

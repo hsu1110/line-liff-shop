@@ -7,6 +7,7 @@ import liffService from '../services/liff'
 import { useRouter } from 'vue-router'
 import { optimizeImage } from '../services/image'
 import { showToast } from '../services/toast'
+import ProductRow from '../components/ProductRow.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -87,20 +88,20 @@ async function checkout() {
     </div>
 
     <div v-else class="cart-list">
-      <div v-for="(item, idx) in items" :key="idx" class="cart-item glass-card">
-        <div class="img-box">
-          <img :src="optimizeImage(item.image_url, 200)" />
-        </div>
-        <div class="info">
-          <h3>{{ item.name }}</h3>
-          <p class="spec">{{ item.spec }}</p>
-          <div class="price-row">
-            <span class="price">$ {{ item.price }}</span>
-            <div class="qty-tag">x {{ item.qty }}</div>
-          </div>
+      <ProductRow 
+        v-for="(item, idx) in items" 
+        :key="idx" 
+        :image="item.image_url"
+        :title="item.name"
+        :spec="item.spec"
+        :price="item.price"
+        :qty="item.qty"
+        :image-size="200"
+      >
+        <template #actions>
           <button @click="removeItem(idx)" class="del-btn">移除</button>
-        </div>
-      </div>
+        </template>
+      </ProductRow>
       
       <div class="checkout-footer glass-card">
         <div class="total-info">
@@ -164,70 +165,21 @@ async function checkout() {
   font-weight: 600;
 }
 
-.cart-item {
-  display: flex;
-  padding: 12px;
-  margin-bottom: 1rem;
-  gap: 12px;
-}
+/* ProductRow handles item styles */
 
-.img-box {
-  width: 90px;
-  height: 90px;
-  border-radius: 12px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.img-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.info h3 {
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-  color: var(--text-main);
-}
-
-.spec {
-  font-size: 0.8rem;
-  color: var(--text-sub);
-  margin-bottom: auto;
-}
-
-.price-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 8px 0;
-}
-
-.price {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.qty-tag {
-  background: rgba(0,0,0,0.05);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
+.cart-list {
+  padding-bottom: 100px; /* 避免被 footer 擋住 */
 }
 
 .del-btn {
-  align-self: flex-end;
   color: #ff7675;
   font-size: 0.8rem;
-  background: none;
+  background: none; /* 或者是個按鈕 */
+  border: 1px solid #ff7675;
+  padding: 4px 12px;
+  border-radius: 20px;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .checkout-footer {

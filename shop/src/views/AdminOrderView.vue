@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import api from '../services/api'
 import liffService from '../services/liff'
 import { showToast } from '../services/toast'
+import ProductRow from '../components/ProductRow.vue'
 
 const orders = ref([])
 const loading = ref(true)
@@ -14,6 +15,9 @@ const fetchOrders = async () => {
   try {
     const res = await api.adminGetAllOrders(user.userId)
     orders.value = res.data.data
+  } catch (e) {
+    console.error("Fetch admin orders error:", e)
+    showToast('無法取得訂單列表', 'error')
   } finally {
     loading.value = false
   }
@@ -22,6 +26,8 @@ const fetchOrders = async () => {
 // 將訂單按 batchId 分組
 const groupedOrders = computed(() => {
   const groups = {}
+  if (!orders.value || !Array.isArray(orders.value)) return groups
+  
   orders.value.forEach(o => {
     if (!groups[o.orderId]) groups[o.orderId] = []
     groups[o.orderId].push(o)
@@ -68,11 +74,16 @@ onMounted(fetchOrders)
         </div>
         
         <div class="items-list">
-          <div v-for="it in items" :key="it.pid + it.spec" class="item">
-            <span class="name">{{ it.productName }}</span>
-            <span class="spec">({{ it.spec }})</span>
-            <span class="qty">x{{ it.qty }}</span>
-          </div>
+          <ProductRow 
+            v-for="it in items" 
+            :key="it.pid + it.spec"
+            :image="it.image_url || 'https://via.placeholder.com/200?text=No+Image'"
+            :title="it.productName"
+            :spec="it.spec"
+            :price="Math.round(it.total / it.qty)"
+            :qty="it.qty"
+            :image-size="150"
+          />
         </div>
 
         <div class="group-footer">
@@ -144,16 +155,6 @@ h1 {
   margin-bottom: 16px;
 }
 
-.item {
-  display: flex;
-  gap: 8px;
-  font-size: 0.9rem;
-  margin-bottom: 4px;
-}
-
-.item .name { flex: 1; }
-.item .qty { font-weight: bold; color: var(--primary); }
-
 .status-select {
   width: 100%;
   padding: 10px;
@@ -165,17 +166,17 @@ h1 {
 }
 
 .loading-state {
-  display: flex;
-  justify-content: center;
-  padding: 50px;
+  padding: 4rem 2rem;
+  text-align: center;
 }
 
 .spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid rgba(0,0,0,0.1);
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--glass-border);
   border-top-color: var(--primary);
   border-radius: 50%;
+  margin: 0 auto 1.5rem;
   animation: rotate 1s linear infinite;
 }
 

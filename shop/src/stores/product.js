@@ -14,6 +14,10 @@ export const useProductStore = defineStore('product', {
     // 5 分鐘內視為有效快取
     isStale: (state) => {
       return Date.now() - state.lastFetchTime > 5 * 60 * 1000
+    },
+    
+    availableProducts: (state) => {
+      return state.products.filter(p => p.status === 'AVAILABLE' || p.status === 'SOLD_OUT')
     }
   },
   

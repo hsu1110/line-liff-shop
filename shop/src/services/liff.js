@@ -13,7 +13,7 @@ const liffService = {
         console.log("LIFF: Local Dev Mode (Mock)")
         this.isMock = true
         this.profile = {
-          userId: "BROWSER_TEST_USER",
+          userId: "BROWSER_TEST_USER", 
           displayName: "開發者 (Local)",
           pictureUrl: "https://via.placeholder.com/150"
         }

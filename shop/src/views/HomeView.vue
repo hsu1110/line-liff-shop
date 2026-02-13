@@ -2,11 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '../stores/product'
-import { storeToRefs } from 'pinia'
-import { optimizeImage } from '../services/image'
+import ProductCard from '../components/ProductCard.vue'
 
 const productStore = useProductStore()
-const { products, loading, error } = storeToRefs(productStore)
 const router = useRouter()
 
 onMounted(() => {
@@ -31,40 +29,26 @@ function goToProduct(pid) {
       <p class="loading-dots">載入日本直送精品</p>
     </div>
 
-    <div v-else-if="error" class="error-state glass-card">
+    <div v-else-if="productStore.error" class="error-state glass-card">
       <div class="icon">⚠️</div>
-      <p>{{ error }}</p>
+      <p>{{ productStore.error }}</p>
       <button @click="window.location.reload()" class="retry-btn">重新嘗試</button>
     </div>
 
-    <div v-else-if="products.length === 0" class="empty-state">
+    <div v-else-if="!productStore.availableProducts || productStore.availableProducts.length === 0" class="empty-state">
       <div class="icon">📦</div>
       <p>目前沒有上架商品，請稍後再來</p>
     </div>
 
     <div v-else class="product-grid">
-      <div 
-        v-for="(p, idx) in products" 
+      <ProductCard 
+        v-for="(p, idx) in productStore.availableProducts" 
         :key="p.pid" 
-        class="product-card glass-card"
+        :product="p"
         :style="{ animationDelay: `${idx * 0.1}s` }"
+        class="animate-card"
         @click="goToProduct(p.pid)"
-      >
-        <div class="img-wrapper">
-          <img :src="optimizeImage(p.image_url, 400)" :alt="p.name" loading="lazy" />
-          <div v-if="p.status === 'SOLD_OUT'" class="sold-out-overlay">
-            <span>SOLD OUT</span>
-          </div>
-          <div class="price-tag">$ {{ p.price }}</div>
-        </div>
-        <div class="p-info">
-          <h3>{{ p.name }}</h3>
-          <div class="card-footer">
-            <span class="status-tag" :class="p.status">{{ p.status === 'AVAILABLE' ? '現貨' : '已售完' }}</span>
-            <div class="go-btn">→</div>
-          </div>
-        </div>
-      </div>
+      />
     </div>
   </div>
 </template>
@@ -102,118 +86,7 @@ function goToProduct(pid) {
   gap: 1.2rem;
 }
 
-.product-card {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.6s ease-out both;
-  cursor: pointer;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.img-wrapper {
-  position: relative;
-  aspect-ratio: 1/1;
-  background: #f0f0f0;
-  overflow: hidden;
-}
-
-.img-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.product-card:hover .img-wrapper img,
-.product-card:hover .sold-out-overlay {
-  transform: scale(1.1);
-}
-
-.price-tag {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  backdrop-filter: blur(5px);
-  font-weight: 600;
-  font-size: 0.9rem;
-  z-index: 20;
-}
-
-.p-info {
-  padding: 12px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: white;
-}
-
-.p-info h3 {
-  font-size: 0.95rem;
-  margin-bottom: 12px;
-  line-height: 1.4;
-  height: 2.8em;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.status-tag {
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-.status-tag.AVAILABLE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
-.status-tag.SOLD_OUT { background: rgba(255, 118, 117, 0.1); color: #d63031; }
-
-.go-btn {
-  width: 24px;
-  height: 24px;
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-}
-
-.sold-out-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-.sold-out-overlay span {
-  padding: 8px 16px;
-  border: 3px solid #e17055;
-  color: #e17055;
-  font-weight: 900;
-  transform: rotate(-15deg);
-  background: rgba(255, 255, 255, 0.9);
-}
+/* ProductCard.vue handles card styles */
 
 .loading-state, .empty-state, .error-state {
   padding: 4rem 2rem;

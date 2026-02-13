@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
 import liffService from '../services/liff'
+import ProductRow from '../components/ProductRow.vue'
 
 const orders = ref([])
 const loading = ref(true)
@@ -56,21 +57,20 @@ onMounted(async () => {
           <span class="time">{{ order.time }}</span>
         </div>
 
-        <!-- 商品內容 -->
-        <div class="content">
-          <h3>{{ order.item_name }}</h3>
-          <div class="row" v-if="order.spec">
-            <span class="label">規格:</span>
-            <span class="value">{{ order.spec }}</span>
-          </div>
-          
-          <div class="row details">
-            <span class="price-qty">
-              $ {{ Math.round(order.total / order.qty) }} x {{ order.qty }}
-            </span>
-            <span class="total">$ {{ order.total }}</span>
-          </div>
-        </div>
+        <!-- 商品內容 (使用 ProductRow) -->
+        <!-- 注意：HistoryView 的資料結構稍有不同，需要適配 -->
+        <ProductRow 
+          :image="order.image_url || 'https://via.placeholder.com/200?text=No+Image'" 
+          :title="order.item_name"
+          :spec="order.spec"
+          :price="Math.round(order.total / order.qty)"
+          :qty="order.qty"
+          :image-size="200"
+        >
+          <template #footer>
+            <div class="total-row">小計: $ {{ order.total }}</div>
+          </template>
+        </ProductRow>
 
         <!-- 狀態與總結 -->
         <div class="card-footer">
@@ -130,27 +130,13 @@ h1 {
 
 .order-id { font-family: monospace; font-weight: 800; color: var(--text-main); }
 
-.row {
-  display: flex;
-  margin-bottom: 4px;
-}
-.label { color: var(--text-sub); margin-right: 8px; font-size: 0.85rem; }
-.value { color: var(--text-main); font-size: 0.85rem; font-weight: 600; }
-
-.content h3 {
-  margin: 8px 0;
-  font-size: 1.05rem;
+.total-row {
+  font-weight: bold;
   color: var(--text-main);
+  text-align: right;
+  margin-top: 4px;
+  font-size: 0.9rem;
 }
-
-.details {
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.price-qty { color: var(--text-sub); font-size: 0.9rem; }
-.total { color: var(--accent); font-size: 1.3rem; font-weight: 800; }
 
 .card-footer {
   margin-top: 12px;

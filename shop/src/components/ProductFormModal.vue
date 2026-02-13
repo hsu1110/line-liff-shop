@@ -115,7 +115,7 @@ const handleSubmit = () => {
       <div class="form-group">
         <label>狀態</label>
         <select v-model="form.status">
-          <option value="AVAILABLE">上架中 (Available)</option>
+          <option value="AVAILABLE">現貨 (Available)</option>
           <option value="SOLD_OUT">已售完 (Sold Out)</option>
           <option value="TEMP">暫存 (Draft/Hidden)</option>
         </select>

@@ -46,6 +46,27 @@ const groupedOrders = computed(() => {
   return groups
 })
 
+const orderStats = computed(() => {
+  const stats = { total: 0, processing: 0, shipped: 0, completed: 0, cancelled: 0 }
+  const uniqueOrders = new Map()
+
+  orders.value.forEach(o => {
+    if (!uniqueOrders.has(o.orderId)) {
+      uniqueOrders.set(o.orderId, o.status)
+    }
+  })
+
+  stats.total = uniqueOrders.size
+  uniqueOrders.forEach(status => {
+    if (status === '處理中') stats.processing++
+    else if (status === '已發貨') stats.shipped++
+    else if (status === '已完成') stats.completed++
+    else if (status === '已取消') stats.cancelled++
+  })
+
+  return stats
+})
+
 const updateStatus = async (orderId, newStatus) => {
   if (updatingOrderId.value) return // 防止重複點擊
   
@@ -71,10 +92,45 @@ onMounted(fetchOrders)
 
 <template>
   <div class="admin-container">
-    <header class="admin-header">
-      <h1>訂單總覽中心</h1>
-      <div class="header-actions">
-        <button @click="$router.push('/admin/products')" class="sub-nav-btn">← 商品管理</button>
+    <header class="admin-header glass-card">
+      <div class="header-main">
+        <div class="header-info">
+          <h1>訂單總覽中心</h1>
+          <p class="admin-subtitle">處理客戶訂單與物流狀態</p>
+        </div>
+        <div class="header-btns">
+          <button @click="$router.push('/admin/products')" class="sub-nav-btn">
+            ← 商品管理中心
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">總訂單數</span>
+          <span class="stat-value">{{ orderStats.total }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">處理中</span>
+          <span class="stat-value processing">{{ orderStats.processing }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已發貨</span>
+          <span class="stat-value shipped">{{ orderStats.shipped }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已完成</span>
+          <span class="stat-value completed">{{ orderStats.completed }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">已取消</span>
+          <span class="stat-value cancelled">{{ orderStats.cancelled }}</span>
+        </div>
       </div>
     </header>
 
@@ -152,13 +208,36 @@ onMounted(fetchOrders)
 }
 
 .admin-header {
+  padding: 24px;
+  margin-bottom: 32px;
+  border-radius: 20px;
+}
+
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 
-h1 {
+.header-info h1 {
   font-size: 1.5rem;
-  margin-bottom: 12px;
+  font-weight: 800;
   color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.admin-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+}
+
+.header-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 .sub-nav-btn {
@@ -168,6 +247,56 @@ h1 {
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.2);
+  transition: all 0.3s;
+}
+
+.sub-nav-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(6, 199, 85, 0.3);
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stat-value.processing { color: #f39c12; } /* Orange-ish */
+.stat-value.shipped { color: #3498db; }    /* Blue-ish */
+.stat-value.completed { color: var(--primary); }
+.stat-value.cancelled { color: #95a5a6; }  /* Gray-ish */
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--glass-border);
 }
 
 .order-group {

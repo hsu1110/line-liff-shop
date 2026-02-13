@@ -34,6 +34,13 @@ export default {
       userId: userId
     }))
   },
+  adminAddProduct(userId, productData) {
+    return apiClient.post('', JSON.stringify({
+      action: 'adminAddProduct',
+      userId: userId,
+      data: productData
+    }))
+  },
   adminUpdateProduct(userId, productData) {
     return apiClient.post('', JSON.stringify({
       action: 'adminUpdateProduct',

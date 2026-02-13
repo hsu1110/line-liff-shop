@@ -58,6 +58,11 @@ function updateQty(delta) {
         <div class="price">$ {{ product.price }}</div>
       </div>
       
+      <div v-if="product.description" class="description-block">
+        <h3>商品介紹</h3>
+        <p>{{ product.description }}</p>
+      </div>
+
       <div class="divider"></div>
 
       <div class="form-section">
@@ -177,6 +182,26 @@ h1 {
   height: 1px;
   background: var(--glass-border);
   margin-bottom: 24px;
+}
+
+.description-block {
+  margin-bottom: 24px;
+  padding: 12px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 8px;
+}
+
+.description-block h3 {
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+
+.description-block p {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .form-section {

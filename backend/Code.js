@@ -92,8 +92,8 @@ function setup() {
   }
   
   // 設定 Products標題
-  productSheet.getRange(1, 1, 1, 6).setValues([
-    ["pid", "name", "price", "image_url", "status", "created_at"]
+  productSheet.getRange(1, 1, 1, 7).setValues([
+    ["pid", "name", "price", "image_url", "status", "created_at", "description"]
   ]);
   
   // 4. 處理 "Orders" 分頁
@@ -222,6 +222,9 @@ function doPost(e) {
         case 'checkAdmin':
              return createJSONOutput({ isAdmin: true, status: 'success' }); // 能過 verifyIdToken 且 ID 吻合就是 Admin
 
+        case 'adminAddProduct':
+            return createJSONOutput(addProduct(contents.data));
+
         case 'adminUpdateProduct':
             return createJSONOutput(updateProduct(contents.data));
             
@@ -306,7 +309,7 @@ function handleUserMessage(event, replyToken) {
       
       // 3. 順便通知管理員 (雖然這裡用 Push 還是要錢，但管理員通知通常無法省)
       // 如果想省管理員通知，可以改用 LINE Notify，但這裡先維持 Push (因為量少)
-      pushToAdmin(`💰 新訂單入帳！\n單號: ${order.order_id}\n買家: ${order.user_name}\n金額: $${order.total}`);
+      pushToAdmin(`💰 新訂單入帳！\n單號: ${order.order_id}\n買家: ${order.user_name}\n金額: ${order.total}`);
     } else {
       replyText(replyToken, "找不到訂單資料，請聯繫客服。");
     }
@@ -333,7 +336,8 @@ function getProductInfo(pid) {
         name: data[i][1],
         price: data[i][2],
         image_url: data[i][3],
-        status: data[i][4]
+        status: data[i][4],
+        description: data[i][6] || ""
       };
     }
   }
@@ -370,7 +374,8 @@ function getAllProducts() {
         name: data[i][1],
         price: data[i][2],
         image_url: data[i][3],
-        status: status
+        status: status,
+        description: data[i][6] || ""
       });
     }
   }
@@ -606,7 +611,7 @@ function handleAdminMessage(event, replyToken) {
           600
         ); // 存 10 分鐘
 
-        replyText(replyToken, "✅ 圖片已接收！\n請換行輸入：\n品名\n價格");
+        replyText(replyToken, "✅ 圖片已接收！\n請換行輸入：\n品名\n價格\n商品描述(選填，第三行)");
       } else {
         replyText(replyToken, "❌ 圖片上傳失敗，請檢查 Cloudinary 設定。");
       }
@@ -626,6 +631,7 @@ function handleAdminMessage(event, replyToken) {
           if (lines.length >= 2) {
             const name = lines[0].trim();
             const price = lines[1].trim(); 
+            const description = lines.slice(2).join("\n").trim(); // 剩下行數當作描述
             const pid = "P_" + new Date().getTime(); // 生成唯一 ID
             const status = "AVAILABLE";
             const createdAt = new Date();
@@ -637,17 +643,18 @@ function handleAdminMessage(event, replyToken) {
               price,
               cachedData.img,
               status,
-              createdAt
+              createdAt,
+              description
             );
 
             // 2. 回傳 Flex Message 卡片
-            const flexMsg = createProductCard(pid, name, price, cachedData.img);
+            const flexMsg = createProductCard(pid, name, price, cachedData.img, description);
             replyFlexMessage(replyToken, flexMsg);
 
             // 3. 清除暫存
             cache.remove(cacheKey);
           } else {
-            replyText(replyToken, "⚠️ 格式錯誤！請務必換行輸入：\n品名\n價格");
+            replyText(replyToken, "⚠️ 格式錯誤！請務必換行輸入：\n品名\n價格\n商品描述(選填)");
           }
         }
       } else {
@@ -758,12 +765,12 @@ function uploadToCloudinary(imageBlob) {
 /**
  * 寫入 Google Sheet (Products)
  */
-function addProductToSheet(pid, name, price, imageUrl, status, createdAt) {
+function addProductToSheet(pid, name, price, imageUrl, status, createdAt, description) {
   const sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).getSheetByName(
     CONFIG.SHEET_TAB.PRODUCTS,
   );
-  // 欄位順序: pid, name, price, image_url, status, created_at
-  sheet.appendRow([pid, name, price, imageUrl, status, createdAt]);
+  // 欄位順序: pid, name, price, image_url, status, created_at, description
+  sheet.appendRow([pid, name, price, imageUrl, status, createdAt, description || ""]);
   
   // 清除快取，讓新商品即時顯示
   CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
@@ -807,6 +814,47 @@ function saveLog(type, content) {
 }
 
 /**
+ * 📦 新增商品 (管理員)
+ */
+function addProduct(data) {
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(5000)) {
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+      const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
+      
+      const pid = "PROD_" + new Date().getTime();
+      let imageUrl = data.image_url || "";
+
+      // 如果有上傳底圖 (Base64)，先上傳
+      if (data.imageBase64) {
+         imageUrl = uploadToCloudinary(data.imageBase64) || imageUrl;
+      }
+
+      // pid, name, price, image_url, status, created_at, description
+      sheet.appendRow([
+        pid,
+        data.name,
+        data.price,
+        imageUrl,
+        data.status || 'AVAILABLE',
+        new Date(),
+        data.description || ""
+      ]);
+
+      CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
+      return { status: 'success', pid: pid };
+
+    } catch(e) {
+      return { status: 'error', message: e.toString() };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+  return { status: 'error', message: '系統忙碌中' };
+}
+
+/**
  * 📦 更新商品資訊 (管理員)
  */
 function updateProduct(data) {
@@ -819,23 +867,28 @@ function updateProduct(data) {
       
       for (let i = 1; i < rows.length; i++) {
         if (rows[i][0] === data.pid) {
-          // 依序更新：名稱、描述、價格、圖片、狀態、規格
-          // 確保欄位對應正確:
-          // Col 2: Name
-          // Col 3: Price
-          // Col 4: ImageUrl
-          // Col 5: Status
-          // Col 6: CreatedAt (不改)
-          // 這裡原代碼似乎有錯，原代碼：
-          // sheet.getRange(i + 1, 2).setValue(data.name);
-          // sheet.getRange(i + 1, 3).setValue(data.description); // Products 表原本沒有 description 欄位? setup() 只有 6 欄
-          // setup(): ["pid", "name", "price", "image_url", "status", "created_at"]
-          // 需要小心，這裡只更新存在的欄位
           
+          let newImageUrl = rows[i][3]; // 預設使用原圖
+          
+          // 如果有新圖片 (Base64)，上傳並使用新網址
+          if (data.imageBase64) {
+             const uploaded = uploadToCloudinary(data.imageBase64);
+             if (uploaded) newImageUrl = uploaded;
+          } else if (data.image_url) {
+             // 如果只傳了網址 (沒傳 Base64)，也更新 (例如恢復預設)
+             newImageUrl = data.image_url;
+          }
+
+          // 依序更新：名稱、價格、圖片、狀態、(跳過Created)、描述
           sheet.getRange(i + 1, 2).setValue(data.name);
           sheet.getRange(i + 1, 3).setValue(data.price);
-          sheet.getRange(i + 1, 4).setValue(data.image_url);
+          sheet.getRange(i + 1, 4).setValue(newImageUrl);
           sheet.getRange(i + 1, 5).setValue(data.status);
+          
+          // 更新 Description (第 7 欄)
+          // 檢查目前 Sheet 欄位數，如果不足自動擴充? 
+          // 為求保險，先假設 user 已 Setup 過，有第 7 欄
+          sheet.getRange(i + 1, 7).setValue(data.description || "");
           
           // 清除快取
           CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");
@@ -848,9 +901,8 @@ function updateProduct(data) {
     } finally {
       lock.releaseLock();
     }
-  } else {
-    return { status: 'error', message: '系統忙碌中' };
   }
+  return { status: 'error', message: '系統忙碌中' };
 }
 
 /**
@@ -1058,7 +1110,7 @@ function pushMessage(to, messages) {
 /**
  * 產生商品卡片 (Flex Message JSON)
  */
-function createProductCard(pid, name, price, imageUrl) {
+function createProductCard(pid, name, price, imageUrl, description) {
   // 嘗試取得 LIFF ID，還沒設定就用預設值提醒
   const liffId = CONFIG.get(KEY.LIFF_ID) || "YOUR_LIFF_ID_HERE";
   const liffUrl = `https://liff.line.me/${liffId}/#/product/${pid}`; // 改成 Hash 路由
@@ -1113,6 +1165,15 @@ function createProductCard(pid, name, price, imageUrl) {
                 "flex": 1
               }
             ]
+          },
+          {
+            "type": "text",
+            "text": description || " ", // 顯示描述，若無則留空
+            "size": "sm",
+            "color": "#aaaaaa",
+            "wrap": true,
+            "maxLines": 3,
+            "margin": "md"
           }
         ]
       },

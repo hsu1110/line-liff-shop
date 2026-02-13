@@ -81,9 +81,16 @@ onMounted(fetchProducts)
 </template>
 
 <style scoped>
+/* Main Container */
 .admin-container {
-  padding: 20px;
+  padding: 1.5rem;
   padding-bottom: 120px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.home-header { /* Note: This class name might be wrong if template uses admin-header */
+  /* Checking template... uses admin-header */
 }
 
 .admin-header {
@@ -126,9 +133,11 @@ h1 {
   gap: 16px;
 }
 
+/* 4-col layout will unlikely trigger if max-width is 600px, but keeping it just in case */
 @media (min-width: 768px) {
   .product-grid {
-    grid-template-columns: repeat(4, 1fr);
+    /* grid-template-columns: repeat(4, 1fr);  Disabled to match Home View 2-col */
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

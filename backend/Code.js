@@ -501,7 +501,7 @@ function submitOrder(formData) {
         // 欄位順序: ["order_id", "order_time", "user_name", "user_id", "pid", "item_name", "spec", "qty", "total_amount", "order_status"]
         rowsToAdd.push([
           subOrderId, orderTime, userName, userId, pid, 
-          product.name, spec, qty, totalAmount, "未付款"
+          product.name, spec, qty, totalAmount, "處理中"
         ]);
       }
 

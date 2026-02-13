@@ -7,6 +7,11 @@ import ProductRow from '../components/ProductRow.vue'
 
 const orders = ref([])
 const loading = ref(true)
+const updatingOrderId = ref(null) // 用於追蹤正在更新的訂單
+const currentFilter = ref('全部') // 當前篩選狀態
+
+const FILTER_TABS = ['全部', '處理中', '已發貨', '已完成', '已取消']
+
 const userId = liffService.getUser()?.userId
 
 const fetchOrders = async () => {
@@ -23,12 +28,18 @@ const fetchOrders = async () => {
   }
 }
 
-// 將訂單按 batchId 分組
+// 將訂單按 batchId 分組，並根據篩選器過濾
 const groupedOrders = computed(() => {
   const groups = {}
   if (!orders.value || !Array.isArray(orders.value)) return groups
   
-  orders.value.forEach(o => {
+  // 先篩選
+  const filtered = currentFilter.value === '全部' 
+    ? orders.value 
+    : orders.value.filter(o => o.status === currentFilter.value)
+
+  // 再分組
+  filtered.forEach(o => {
     if (!groups[o.orderId]) groups[o.orderId] = []
     groups[o.orderId].push(o)
   })
@@ -36,7 +47,11 @@ const groupedOrders = computed(() => {
 })
 
 const updateStatus = async (orderId, newStatus) => {
+  if (updatingOrderId.value) return // 防止重複點擊
+  
+  updatingOrderId.value = orderId
   const user = liffService.getUser()
+  
   try {
     await api.adminUpdateOrder(user.userId, orderId, newStatus)
     // 更新本地狀態
@@ -46,6 +61,8 @@ const updateStatus = async (orderId, newStatus) => {
     showToast('狀態已更新', 'success')
   } catch (e) {
     showToast('更新失敗', 'error')
+  } finally {
+    updatingOrderId.value = null
   }
 }
 
@@ -60,6 +77,19 @@ onMounted(fetchOrders)
         <button @click="$router.push('/admin/products')" class="sub-nav-btn">← 商品管理</button>
       </div>
     </header>
+
+    <!-- 篩選標籤列 -->
+    <div class="filter-bar">
+      <button 
+        v-for="tab in FILTER_TABS" 
+        :key="tab"
+        class="filter-tab"
+        :class="{ active: currentFilter === tab }"
+        @click="currentFilter = tab"
+      >
+        {{ tab }}
+      </button>
+    </div>
 
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
@@ -88,9 +118,20 @@ onMounted(fetchOrders)
 
         <div class="group-footer">
           <div class="status-selector">
-            <select :value="items[0].status" @change="e => updateStatus(batchId, e.target.value)" class="status-select">
-              <option value="未付款">未付款</option>
-              <option value="已付款">已付款</option>
+            <!-- Loading 狀態顯示 -->
+            <div v-if="updatingOrderId === batchId" class="updating-status">
+              <div class="mini-spinner"></div>
+              <span>更新中...</span>
+            </div>
+            
+            <!-- 狀態選單 -->
+            <select 
+              v-else
+              :value="items[0].status" 
+              @change="e => updateStatus(batchId, e.target.value)" 
+              class="status-select"
+            >
+              <option value="處理中">處理中</option>
               <option value="已發貨">已發貨</option>
               <option value="已完成">已完成</option>
               <option value="已取消">已取消</option>
@@ -104,7 +145,9 @@ onMounted(fetchOrders)
 
 <style scoped>
 .admin-container {
-  padding: 20px;
+  padding: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
   padding-bottom: 120px;
 }
 
@@ -181,4 +224,54 @@ h1 {
 }
 
 @keyframes rotate { to { transform: rotate(360deg); } }
+
+/* Filter Bar Styles */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  /* 隱藏捲軸但保留功能 */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  white-space: nowrap;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: white;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s;
+}
+
+.filter-tab.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Mini Spinner for Update Status */
+.updating-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  justify-content: flex-end;
+}
+
+.mini-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--glass-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: rotate 1s linear infinite;
+}
 </style>

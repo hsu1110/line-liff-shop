@@ -1,0 +1,11 @@
+Uncaught (in promise) TypeError: _ctx.optimizeImage is not a function
+    at Proxy._sfc_render (ProductFormModal.vue:90:92)
+    at renderComponentRoot (chunk-DAESH65R.js?v=a7c27013:6676:17)
+    at ReactiveEffect.componentUpdateFn [as fn] (chunk-DAESH65R.js?v=a7c27013:8308:26)
+    at ReactiveEffect.run (chunk-DAESH65R.js?v=a7c27013:507:19)
+    at updateComponent (chunk-DAESH65R.js?v=a7c27013:8169:18)
+    at processComponent (chunk-DAESH65R.js?v=a7c27013:8103:7)
+    at patch (chunk-DAESH65R.js?v=a7c27013:7596:11)
+    at patchBlockChildren (chunk-DAESH65R.js?v=a7c27013:7962:7)
+    at patchElement (chunk-DAESH65R.js?v=a7c27013:7880:7)
+    at processElement (chunk-DAESH65R.js?v=a7c27013:7734:9)

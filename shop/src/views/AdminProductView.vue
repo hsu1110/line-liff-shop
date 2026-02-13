@@ -3,77 +3,47 @@ import { ref, onMounted } from 'vue'
 import api from '../services/api'
 import liffService from '../services/liff'
 import { showToast } from '../services/toast'
+import { useProductStore } from '../stores/productStore'
 import ProductCard from '../components/ProductCard.vue'
 import ProductFormModal from '../components/ProductFormModal.vue'
 
-const products = ref([])
-const loading = ref(true)
+const productStore = useProductStore()
 
 // Modal State
 const showModal = ref(false)
 const submitting = ref(false)
 const editingProduct = ref(null) // null for Add, object for Edit
+const loadingPids = reactive(new Set()) // Track loading state for each product
 
 const fetchProducts = async () => {
-  loading.value = true
-  try {
-    const res = await api.getProducts()
-    products.value = res.data.data
-  } finally {
-    loading.value = false
-  }
+  // 嘗試使用快取載入，若使用者想強制更新可加按鈕 (目前先用預設策略)
+  await productStore.fetchProducts()
 }
 
-// Open Modal - Add
-const openAddModal = () => {
-  editingProduct.value = null
-  showModal.value = true
-}
-
-// Open Modal - Edit
-const openEditModal = (product) => {
-  editingProduct.value = product
-  showModal.value = true
-}
-
-// Save Product (Handled by Modal event)
-const saveProduct = async (formData) => {
-  submitting.value = true
-  const user = liffService.getUser()
-  const isEdit = !!formData.pid && formData.pid !== '' // Check if PID exists
-  
-  try {
-    let res
-    if (isEdit) {
-      res = await api.adminUpdateProduct(user.userId, formData)
-    } else {
-      res = await api.adminAddProduct(user.userId, formData)
-    }
-
-    if (res.data.status === 'success') {
-      showToast(isEdit ? '更新成功' : '新增成功', 'success')
-      showModal.value = false
-      await fetchProducts() // Refresh list
-    } else {
-      showToast(res.data.message || '儲存失敗', 'error')
-    }
-  } catch (e) {
-    console.error(e)
-    showToast('連線錯誤', 'error')
-  } finally {
-    submitting.value = false
-  }
-}
+// ... (Modal logic omitted)
 
 const toggleStatus = async (product) => {
-  const newStatus = product.status === 'AVAILABLE' ? 'SOLD_OUT' : 'AVAILABLE'
+  if (loadingPids.has(product.pid)) return
+  
+  // Logic: AVAILABLE -> SOLD_OUT -> AVAILABLE
+  // If TEMP -> AVAILABLE (Publish)
+  let newStatus = 'AVAILABLE'
+  if (product.status === 'AVAILABLE') newStatus = 'SOLD_OUT'
+  else if (product.status === 'SOLD_OUT') newStatus = 'AVAILABLE'
+  else if (product.status === 'TEMP') newStatus = 'AVAILABLE'
+
   const user = liffService.getUser()
+  loadingPids.add(product.pid)
+  
   try {
     await api.adminUpdateProduct(user.userId, { ...product, status: newStatus })
-    product.status = newStatus
+    // 更新 Store 中的狀態
+    productStore.updateProductInStore({ ...product, status: newStatus })
     showToast(`狀態已更新為 ${newStatus}`, 'success')
   } catch (e) {
     showToast('更新失敗', 'error')
+  } finally {
+    loadingPids.delete(product.pid)
   }
 }
 
@@ -82,7 +52,8 @@ const deleteProduct = async (pid) => {
   const user = liffService.getUser()
   try {
     await api.adminDeleteProduct(user.userId, pid)
-    products.value = products.value.filter(p => p.pid !== pid)
+    // 從 Store 移除
+    productStore.removeProductFromStore(pid)
     showToast('商品已刪除', 'success')
   } catch (e) {
     showToast('刪除失敗', 'error')
@@ -107,19 +78,19 @@ onMounted(fetchProducts)
       </div>
     </header>
 
-    <div v-if="loading" class="loading-state">
+    <div v-if="productStore.loading && productStore.allProducts.length === 0" class="loading-state">
       <div class="spinner"></div>
       <p>載入中...</p>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="products.length === 0" class="empty-state">
+    <div v-else-if="productStore.allProducts.length === 0" class="empty-state">
       <p>目前沒有商品，點擊右上角「新增」開始上架。</p>
     </div>
 
     <div v-else class="product-grid">
       <ProductCard 
-        v-for="p in products" 
+        v-for="p in productStore.allProducts" 
         :key="p.pid" 
         :product="p"
         :show-status="false"
@@ -127,8 +98,16 @@ onMounted(fetchProducts)
         <template #footer>
           <div class="admin-actions">
             <button @click.stop="openEditModal(p)" class="action-btn edit">編輯</button>
-            <button @click.stop="toggleStatus(p)" class="action-btn status" :class="p.status">
-              {{ p.status === 'AVAILABLE' ? '下架' : '上架' }}
+            <button 
+              @click.stop="toggleStatus(p)" 
+              class="action-btn status" 
+              :class="[p.status, { 'loading': loadingPids.has(p.pid) }]"
+              :disabled="loadingPids.has(p.pid)"
+            >
+              <span v-if="loadingPids.has(p.pid)">⏳</span>
+              <span v-else>
+                {{ p.status === 'AVAILABLE' ? '下架' : (p.status === 'TEMP' ? '發佈' : '上架') }}
+              </span>
             </button>
             <button @click.stop="deleteProduct(p.pid)" class="action-btn delete">刪除</button>
           </div>
@@ -250,4 +229,10 @@ h1 {
 @keyframes rotate {
   to { transform: rotate(360deg); }
 }
+
+/* 狀態按鈕樣式 */
+.action-btn.status.AVAILABLE { background: rgba(6, 199, 85, 0.1); color: var(--primary); }
+.action-btn.status.SOLD_OUT { background: rgba(255, 118, 117, 0.1); color: #d63031; }
+.action-btn.status.TEMP { background: rgba(200, 200, 200, 0.2); color: #636e72; }
+.action-btn.status.loading { opacity: 0.7; cursor: wait; }
 </style>

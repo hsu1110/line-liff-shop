@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
+import { optimizeImage } from '../services/image'
 
 const props = defineProps({
   show: Boolean,
@@ -87,7 +88,7 @@ const handleSubmit = () => {
       <h2>{{ isEditMode ? '編輯商品' : '新增商品' }}</h2>
       
       <div class="form-group image-upload">
-        <label for="p-image-modal" class="image-preview" :style="{ backgroundImage: `url(${form.image_url})` }">
+        <label for="p-image-modal" class="image-preview" :style="{ backgroundImage: `url(${optimizeImage(form.image_url, 600)})` }">
           <div v-if="!form.image_url" class="placeholder">
             <span>+</span>
             <p>點擊上傳照片</p>
@@ -116,6 +117,7 @@ const handleSubmit = () => {
         <select v-model="form.status">
           <option value="AVAILABLE">上架中 (Available)</option>
           <option value="SOLD_OUT">已售完 (Sold Out)</option>
+          <option value="TEMP">暫存 (Draft/Hidden)</option>
         </select>
       </div>
 

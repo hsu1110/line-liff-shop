@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProductStore } from '../stores/product'
+import { useProductStore } from '../stores/productStore'
 import ProductCard from '../components/ProductCard.vue'
 
 const productStore = useProductStore()
@@ -23,7 +23,7 @@ function goToProduct(pid) {
       <p class="subtitle">日本代購精選商城</p>
     </header>
     
-    <div v-if="productStore.loading" class="loading-state">
+    <div v-if="productStore.loading && productStore.allProducts.length === 0" class="loading-state">
       <div class="spinner"></div>
       <p class="loading-text">載入中...</p>
       <p class="loading-dots">載入日本直送精品</p>
@@ -32,17 +32,17 @@ function goToProduct(pid) {
     <div v-else-if="productStore.error" class="error-state glass-card">
       <div class="icon">⚠️</div>
       <p>{{ productStore.error }}</p>
-      <button @click="window.location.reload()" class="retry-btn">重新嘗試</button>
+      <button @click="productStore.fetchProducts(true)" class="retry-btn">重新嘗試</button>
     </div>
 
-    <div v-else-if="!productStore.availableProducts || productStore.availableProducts.length === 0" class="empty-state">
+    <div v-else-if="!productStore.displayProducts || productStore.displayProducts.length === 0" class="empty-state">
       <div class="icon">📦</div>
       <p>目前沒有上架商品，請稍後再來</p>
     </div>
 
     <div v-else class="product-grid">
       <ProductCard 
-        v-for="(p, idx) in productStore.availableProducts" 
+        v-for="(p, idx) in productStore.displayProducts" 
         :key="p.pid" 
         :product="p"
         :style="{ animationDelay: `${idx * 0.1}s` }"

@@ -1,30 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import api from '../services/api'
+import { useProductStore } from '../stores/productStore'
 import { useCartStore } from '../stores/cart'
 import { optimizeImage } from '../services/image'
 import { showToast } from '../services/toast'
 
 const route = useRoute()
+const productStore = useProductStore()
 const cartStore = useCartStore()
-const product = ref(null)
-const loading = ref(true)
+
 const qty = ref(1)
 const spec = ref('')
 
+const product = computed(() => productStore.getProductByPid(route.params.id))
+const loading = computed(() => productStore.loading && !product.value)
+
 onMounted(async () => {
-  try {
-    const res = await api.getProduct(route.params.id)
-    if (res.data.status === 'success') {
-      product.value = res.data.data
-    } else {
-      showToast("商品不存在", 'error')
+  // If product not found in store, fetch list
+  if (!product.value) {
+    await productStore.fetchProducts()
+    if (!product.value) {
+       showToast("查無此商品", "error")
     }
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
   }
 })
 

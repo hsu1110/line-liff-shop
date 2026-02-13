@@ -366,18 +366,16 @@ function getAllProducts() {
   
   // 從第 2 行開始讀 (跳過標題)
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][4];
-    // 只回傳上架中或售完的商品 (不回傳下架 OFF_SHELF 的)
-    if (status === 'AVAILABLE' || status === 'SOLD_OUT') {
-      products.push({
-        pid: data[i][0],
-        name: data[i][1],
-        price: data[i][2],
-        image_url: data[i][3],
-        status: status,
-        description: data[i][6] || ""
-      });
-    }
+    // status: data[i][4]
+    // 回傳所有商品，前端 Store 會自行過濾顯示
+    products.push({
+      pid: data[i][0],
+      name: data[i][1],
+      price: data[i][2],
+      image_url: data[i][3],
+      status: data[i][4], // AVAILABLE, SOLD_OUT, TEMP
+      description: data[i][6] || ""
+    });
   }
   const result = products.reverse(); // 新的上架排前面
   
@@ -814,6 +812,23 @@ function saveLog(type, content) {
 }
 
 /**
+ * 輔助：將 Base64 字串轉為 Blob物件
+ */
+function base64ToBlob(base64String) {
+  try {
+    const parts = base64String.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = parts[1];
+    const decoded = Utilities.base64Decode(data);
+    return Utilities.newBlob(decoded, mimeType, "upload.jpg");
+  } catch (e) {
+    Logger.log("Base64 Decode Error: " + e);
+    return null;
+  }
+}
+
+/**
  * 📦 新增商品 (管理員)
  */
 function addProduct(data) {
@@ -823,7 +838,8 @@ function addProduct(data) {
       const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
       const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
       
-      const pid = "PROD_" + new Date().getTime();
+      // 1. 統一 PID 格式 (P_{timestamp})
+      const pid = "P_" + new Date().getTime();
       let imageUrl = "";
 
       // 檢查傳入的 image_url 是否為 Base64 (預覽圖)，如果是則不直接使用
@@ -831,16 +847,12 @@ function addProduct(data) {
         imageUrl = data.image_url;
       }
 
-      // 如果有上傳底圖 (Base64)，先上傳
-      if (data.imageBase64) {
-         const uploaded = uploadToCloudinary(data.imageBase64);
-         if (uploaded) {
-           imageUrl = uploaded;
-         } else {
-           // 上傳失敗，且原網址是 Base64 -> 存空字串以免爆表
-           if (data.image_url && data.image_url.indexOf("data:image") !== -1) {
-             imageUrl = ""; 
-           }
+      // 2. 如果有上傳底圖 (Base64)，轉為 Blob 後上傳
+      if (data.imageBase64 && data.imageBase64.indexOf("data:image") !== -1) {
+         const imageBlob = base64ToBlob(data.imageBase64);
+         if (imageBlob) {
+            const uploaded = uploadToCloudinary(imageBlob);
+            if (uploaded) imageUrl = uploaded;
          }
       }
 
@@ -889,9 +901,12 @@ function updateProduct(data) {
           }
 
           // 如果有新圖片 (Base64)，上傳並使用新網址
-          if (data.imageBase64) {
-             const uploaded = uploadToCloudinary(data.imageBase64);
-             if (uploaded) newImageUrl = uploaded;
+          if (data.imageBase64 && data.imageBase64.indexOf("data:image") !== -1) {
+             const imageBlob = base64ToBlob(data.imageBase64);
+             if (imageBlob) {
+                const uploaded = uploadToCloudinary(imageBlob);
+                if (uploaded) newImageUrl = uploaded;
+             }
           }
 
           // 依序更新：名稱、價格、圖片、狀態、(跳過Created)、描述

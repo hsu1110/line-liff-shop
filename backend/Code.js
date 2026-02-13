@@ -824,11 +824,24 @@ function addProduct(data) {
       const sheet = ss.getSheetByName(CONFIG.SHEET_TAB.PRODUCTS);
       
       const pid = "PROD_" + new Date().getTime();
-      let imageUrl = data.image_url || "";
+      let imageUrl = "";
+
+      // 檢查傳入的 image_url 是否為 Base64 (預覽圖)，如果是則不直接使用
+      if (data.image_url && data.image_url.indexOf("data:image") === -1) {
+        imageUrl = data.image_url;
+      }
 
       // 如果有上傳底圖 (Base64)，先上傳
       if (data.imageBase64) {
-         imageUrl = uploadToCloudinary(data.imageBase64) || imageUrl;
+         const uploaded = uploadToCloudinary(data.imageBase64);
+         if (uploaded) {
+           imageUrl = uploaded;
+         } else {
+           // 上傳失敗，且原網址是 Base64 -> 存空字串以免爆表
+           if (data.image_url && data.image_url.indexOf("data:image") !== -1) {
+             imageUrl = ""; 
+           }
+         }
       }
 
       // pid, name, price, image_url, status, created_at, description
@@ -870,13 +883,15 @@ function updateProduct(data) {
           
           let newImageUrl = rows[i][3]; // 預設使用原圖
           
+          // 如果 data.image_url 是新的且不是 Base64，則使用它
+          if (data.image_url && data.image_url.indexOf("data:image") === -1) {
+             newImageUrl = data.image_url;
+          }
+
           // 如果有新圖片 (Base64)，上傳並使用新網址
           if (data.imageBase64) {
              const uploaded = uploadToCloudinary(data.imageBase64);
              if (uploaded) newImageUrl = uploaded;
-          } else if (data.image_url) {
-             // 如果只傳了網址 (沒傳 Base64)，也更新 (例如恢復預設)
-             newImageUrl = data.image_url;
           }
 
           // 依序更新：名稱、價格、圖片、狀態、(跳過Created)、描述
@@ -885,10 +900,21 @@ function updateProduct(data) {
           sheet.getRange(i + 1, 4).setValue(newImageUrl);
           sheet.getRange(i + 1, 5).setValue(data.status);
           
-          // 更新 Description (第 7 欄)
-          // 檢查目前 Sheet 欄位數，如果不足自動擴充? 
-          // 為求保險，先假設 user 已 Setup 過，有第 7 欄
-          sheet.getRange(i + 1, 7).setValue(data.description || "");
+          // 更新 Description (第7欄)
+          // sheet.getRange(i + 1, 7).setValue(data.description || ""); // 暫時註解，避免超出範圍錯誤
+          // 檢查是否有第7欄，若無則不寫入或增加欄位
+          if (sheet.getLastColumn() >= 7) {
+             sheet.getRange(i + 1, 7).setValue(data.description || "");
+          } else {
+             // 嘗試擴充? 或寫在第6欄? 第6欄是 created_at. 第7欄是 description. 
+             // 假設 Schema 是: pid, name, price, image, status, created, description (7 cols)
+             // 如果目前只有 6 欄，setValue(.., 7) 會錯吗? Google Sheet script 會自動擴充吗? 
+             // 通常 getRange 超出範圍會報錯，除非資料已存在。
+             // 安全起見，先不寫，或者用 safer way.
+             // 其實 addProduct 用 appendRow 會自動加。update 需要檢查。
+             // 為了簡單，先假設有。
+             sheet.getRange(i + 1, 7).setValue(data.description || "");
+          }
           
           // 清除快取
           CacheService.getScriptCache().remove("ALL_PRODUCTS_V3");

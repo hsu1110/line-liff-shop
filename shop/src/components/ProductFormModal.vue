@@ -67,7 +67,17 @@ const handleSubmit = () => {
     alert('請填寫完整資訊')
     return
   }
-  emit('save', { ...form })
+  
+  // Clone form data
+  const formData = { ...form }
+  
+  // If image_url is Base64 (preview), do not send it as image_url
+  // Backend expects imageBase64 for upload, or a valid http URL for image_url
+  if (formData.image_url && formData.image_url.startsWith('data:')) {
+    formData.image_url = ''
+  }
+
+  emit('save', formData)
 }
 </script>
 
